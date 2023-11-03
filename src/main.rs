@@ -1,4 +1,5 @@
 use std::env;
+use std::path::PathBuf;
 use std::process;
 use std::fs;
 use std::path::Path;
@@ -34,11 +35,12 @@ fn main() {
 
     let mut files: Vec<String> = Vec::new();
     let root_dir = Path::new(
-        "/Users/milton/Desktop/HotelDataParser/data/reviews/SF"
+        "/Users/milton/Desktop/HotelDataParser/data/reviews"
     );
 
     get_files(root_dir, &mut files);
 
+    println!("Total num files: {}", files.len());
     println!("Files: {:#?}", files);
 }
 
@@ -48,25 +50,31 @@ fn main() {
 // 4. else check contents of dir
 
 fn get_files(root_dir: &Path, files_list:  &mut Vec<String>) {
+    let mut dirs: Vec<PathBuf> = Vec::new();
     let entries = fs::read_dir(root_dir).unwrap();
     for entry in entries {
-        if entry.as_ref().unwrap().path().is_file() {
-            let file_path = entry.as_ref().unwrap()
+        let entry_path = entry.as_ref().unwrap()
                                     .path().as_path().to_owned();
-            let file_name = file_path.file_name().unwrap();
-            let file_extension = file_path.extension().unwrap_or(
+        if entry.as_ref().unwrap().path().is_file() {
+            let file_extension = entry_path.extension().unwrap_or(
                 OsStr::new("No Extension")
             );
-
-            // println!("File Path: {:#?}", file_path);
-            // println!("File Name: {:#?}", file_name);
-            // println!("File Ext: {:#?}", file_extension);
-    
+            
             if file_extension == "json" {
-                files_list.push(file_name.to_os_string().into_string().unwrap());
+                files_list.push(
+                    entry_path.file_name().unwrap()
+                    .to_os_string().into_string().unwrap()
+                );
             }
         } else {
-            println!("Not a file: {:#?}", entry.as_ref().unwrap().file_name());
+            println!("Dir Name: {:#?}", entry.as_ref().unwrap().file_name());
+            dirs.push(entry_path);
         }
+    }
+
+    println!("Num of files: {}", files_list.len());
+    for dir in dirs {
+        println!("\nGoing into dir: {:#?}", dir);
+        get_files(&dir, files_list);
     }
 }
