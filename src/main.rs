@@ -1,11 +1,10 @@
 use std::env;
-use std::path::PathBuf;
-use std::process;
+use std::io::BufReader;
 use std::fs;
-use std::path::Path;
 use std::ffi::OsStr;
 use std::sync::{ Arc, Mutex };
 use std::thread;
+use std::time::Instant;
 
 struct Config {
     hotels_path: String,
@@ -37,41 +36,105 @@ fn main() {
 
     let mut args = env::args();
     args.next();
-    
-    let mut files: Arc<Mutex<Vec<String>>> = Arc::new(
-        Mutex::new(Vec::new())
-    );
-    
-    let mut handles = vec![];
+    args.next();
+    let a = args.next().unwrap();
 
-    for dir in args {
-        let files_c = files.clone();
-        let handle = thread::spawn(
-            move || {mt_get_files(dir, files_c)}
-        );
-        handles.push(handle);
+    let mut times = vec![];
+    let i = 1;
+    for _ in 0..i {
+        let a = a.clone();
+        // let mut files: Arc<Mutex<Vec<String>>> = Arc::new(
+        //     Mutex::new(Vec::new())
+        // );
+        
+        // let files_c = files.clone();
+        let mut files = vec![];
+
+        let start = Instant::now();
+        traverse_dir(a, &mut files);
+        // let handle = thread::spawn(
+        //     move || {mt_traverse_dir(a, files_c)}
+        // );
+        // handle.join().unwrap();
+        let duration = start.elapsed();
+        times.push(duration.as_micros());
     }
+    
+    println!("Durations: {:#?}", times);
+    let avg = times.iter()
+    .fold(0, |acc, x| acc + x) / i;
+    println!("Durations: {:#?}", avg);
 
-    for handle in handles {
-        handle.join().unwrap();
-    }
+    // handles.push(handle);
+    // for handle in handles {
+    //     handle.join().unwrap();
+    // }
 
-    println!("Total num files: {}", files.lock().unwrap().len());
-    println!("Files: {:#?}", files.lock().unwrap());
+    // println!("Total num files: {}", files.lock().unwrap().len());
+    // println!("Files: {:#?}", files.lock().unwrap());
 
     // let mut files: Vec<String> = vec![];
-    // get_files(root_dir, &mut files);
+    // traverse_dir(root_dir, &mut files);
     // println!("Total Files: {:#?}", files);
-
+    let s = "/Users/milton/Desktop/HotelDataParser/data/reviews/SF/review491.json".to_string();
+    process_files(s);
 }
 
-fn get_files(root_dir: String, files_list:  &mut Vec<String>) {
-    let mut dirs: Vec<PathBuf> = Vec::new();
+fn process_files(file_path: String) {
+    let file = fs::File::open(file_path).unwrap();
+    let reader = BufReader::new(file);
+    let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
+    let collection = &val["reviewDetails"]["reviewCollection"]["review"];
+    let num_reviews = val["reviewDetails"]["numberOfReviewsInThisPage"]
+                                .as_u64().unwrap() as usize;
+    
+    let mut reviews: Vec<Review> = vec![];
+    for i in 0..num_reviews {
+        let hotel_id: u32 = collection[i]["hotelId"]
+                            .as_str().unwrap().parse().unwrap();
+        let review_id = collection[i]["reviewId"]
+                            .as_str().unwrap().to_string();
+        let rating: u32 = collection[i]["ratingOverall"]
+                            .to_string().parse().unwrap();
+        let author = collection[i]["userNickname"]
+                            .as_str().unwrap().to_string();
+        let title = collection[i]["title"]
+                            .as_str().unwrap().to_string();
+        let text = collection[i]["reviewText"]
+                            .as_str().unwrap().to_string();
+        let time = collection[i]["reviewSubmissionTime"]
+                            .as_str().unwrap().to_string();
+     
+        reviews.push(
+            Review { hotel_id, review_id, rating,
+                    author, title, text, time }
+        );
+    }
+}
+
+#[derive(Debug)]
+struct Review {
+    hotel_id: u32,
+    review_id: String,
+    rating: u32,
+    author: String,
+    title: String,
+    text: String,
+    time: String,
+}
+
+fn traverse_dir(root_dir: String, files_list:  &mut Vec<String>) {
     let entries = fs::read_dir(root_dir).unwrap();
+
     for entry in entries {
         let entry_path = entry.as_ref().unwrap()
                                     .path().as_path().to_owned();
-        if entry.as_ref().unwrap().path().is_file() {
+        if entry.as_ref().unwrap().path().is_dir() {
+            traverse_dir(
+                entry_path.into_os_string().into_string().unwrap(),
+                files_list
+            );
+        } else {
             let file_extension = entry_path.extension().unwrap_or(
                 OsStr::new("No Extension")
             );
@@ -82,21 +145,11 @@ fn get_files(root_dir: String, files_list:  &mut Vec<String>) {
                     .to_os_string().into_string().unwrap()
                 );
             }
-        } else {
-            println!("Dir Name: {:#?}", entry.as_ref().unwrap().file_name());
-            dirs.push(entry_path);
         }
-    }
-
-    println!("Num of files: {}", files_list.len());
-    for dir in dirs {
-        println!("\nGoing into dir: {:#?}", dir);
-        get_files(dir.into_os_string().into_string().unwrap()
-        , files_list);
     }
 }
 
-fn mt_get_files(root_dir: String, files_list:  Arc<Mutex<Vec<String>>>) {
+fn mt_traverse_dir(root_dir: String, files_list:  Arc<Mutex<Vec<String>>>) {
     let entries = fs::read_dir(&root_dir).unwrap();
     let mut handles = vec![];
 
@@ -109,7 +162,7 @@ fn mt_get_files(root_dir: String, files_list:  Arc<Mutex<Vec<String>>>) {
                                         .into_string().unwrap();
 
             let handle = thread::spawn(
-                move || {mt_get_files(root_dir, files_list)}
+                move || {mt_traverse_dir(root_dir, files_list)}
             );
             handles.push(handle);
         } else {
