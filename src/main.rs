@@ -5,6 +5,7 @@ use std::ffi::OsStr;
 use std::sync::{ Arc, Mutex };
 use std::thread;
 use std::time::Instant;
+use std::collections::HashMap;
 
 struct Config {
     hotels_path: String,
@@ -37,78 +38,107 @@ fn main() {
     let mut args = env::args();
     args.next();
     args.next();
-    let a = args.next().unwrap();
-
-    let mut times = vec![];
-    let i = 1;
-    for _ in 0..i {
-        let a = a.clone();
-        // let mut files: Arc<Mutex<Vec<String>>> = Arc::new(
-        //     Mutex::new(Vec::new())
-        // );
-        
-        // let files_c = files.clone();
-        let mut files = vec![];
-
-        let start = Instant::now();
-        traverse_dir(a, &mut files);
-        // let handle = thread::spawn(
-        //     move || {mt_traverse_dir(a, files_c)}
-        // );
-        // handle.join().unwrap();
-        let duration = start.elapsed();
-        times.push(duration.as_micros());
-    }
+    let dir_path = args.next().unwrap();
     
-    println!("Durations: {:#?}", times);
-    let avg = times.iter()
-    .fold(0, |acc, x| acc + x) / i;
-    println!("Durations: {:#?}", avg);
+    // Multithreading approach
+    let mut reviews_set: Arc<Mutex<HashMap<u32, Vec<Review>>>> = 
+        Arc::new(Mutex::new(HashMap::new()));
+    let reviews_dir_path = dir_path.clone();    
+    let files_c = reviews_set.clone();
 
-    // handles.push(handle);
-    // for handle in handles {
-    //     handle.join().unwrap();
-    // }
+    let start = Instant::now();
+    let handle = thread::spawn(
+        move || {mt_traverse_dir(reviews_dir_path, files_c)}
+    );
+    handle.join().unwrap();
+    let duration = start.elapsed();
 
-    // println!("Total num files: {}", files.lock().unwrap().len());
-    // println!("Files: {:#?}", files.lock().unwrap());
+    println!("Duration: {:#?}", duration);
+    println!("{:#?}", reviews_set.lock().unwrap().get(&10323).unwrap().len());
+    println!("{:#?}", reviews_set.lock().unwrap().get(&828).unwrap().len());
+    println!("{:#?}", reviews_set.lock().unwrap().get(&10323).unwrap()[0]);
+    println!("{:#?}", reviews_set.lock().unwrap().len());
 
-    // let mut files: Vec<String> = vec![];
-    // traverse_dir(root_dir, &mut files);
-    // println!("Total Files: {:#?}", files);
-    let s = "/Users/milton/Desktop/HotelDataParser/data/reviews/SF/review491.json".to_string();
-    process_files(s);
+    // Recursive approach
+    let mut reviews_set: HashMap<u32, Vec<Review>> = HashMap::new();
+    let reviews_dir_path = dir_path.clone();
+
+    let start = Instant::now();
+    traverse_dir(reviews_dir_path, &mut reviews_set);
+    let duration = start.elapsed();
+    println!("Duration: {:#?}", duration);
+
+    println!("{:#?}", reviews_set.get(&10323).unwrap().len());
+    println!("{:#?}", reviews_set.get(&828).unwrap().len());
+    println!("{:#?}", reviews_set.get(&10323).unwrap()[0]);
+    println!("{:#?}", reviews_set.len());
 }
 
-fn process_files(file_path: String) {
+fn mt_process_reviews(file_path: String, review_set: Arc<Mutex<HashMap<u32, Vec<Review>>>>) {
     let file = fs::File::open(file_path).unwrap();
     let reader = BufReader::new(file);
     let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
     let collection = &val["reviewDetails"]["reviewCollection"]["review"];
     let num_reviews = val["reviewDetails"]["numberOfReviewsInThisPage"]
                                 .as_u64().unwrap() as usize;
-    
-    let mut reviews: Vec<Review> = vec![];
-    for i in 0..num_reviews {
-        let hotel_id: u32 = collection[i]["hotelId"]
-                            .as_str().unwrap().parse().unwrap();
-        let review_id = collection[i]["reviewId"]
-                            .as_str().unwrap().to_string();
-        let rating: u32 = collection[i]["ratingOverall"]
-                            .to_string().parse().unwrap();
-        let author = collection[i]["userNickname"]
-                            .as_str().unwrap().to_string();
-        let title = collection[i]["title"]
-                            .as_str().unwrap().to_string();
-        let text = collection[i]["reviewText"]
-                            .as_str().unwrap().to_string();
-        let time = collection[i]["reviewSubmissionTime"]
-                            .as_str().unwrap().to_string();
-     
-        reviews.push(
-            Review { hotel_id, review_id, rating,
-                    author, title, text, time }
-        );
+    if num_reviews > 0 {
+        let mut reviews: Vec<Review> = vec![];
+        for i in 0..num_reviews {
+            let hotel_id: u32 = collection[i]["hotelId"]
+                                .as_str().unwrap().parse().unwrap();
+            let review_id = collection[i]["reviewId"]
+                                .as_str().unwrap().to_string();
+            let rating: u32 = collection[i]["ratingOverall"]
+                                .to_string().parse().unwrap();
+            let author = collection[i]["userNickname"]
+                                .as_str().unwrap().to_string();
+            let title = collection[i]["title"]
+                                .as_str().unwrap().to_string();
+            let text = collection[i]["reviewText"]
+                                .as_str().unwrap().to_string();
+            let time = collection[i]["reviewSubmissionTime"]
+                                .as_str().unwrap().to_string();
+        
+            reviews.push(
+                Review { hotel_id, review_id, rating,
+                        author, title, text, time }
+            );
+        }
+        review_set.lock().unwrap().insert(reviews[0].hotel_id, reviews);
+    }
+}
+
+fn process_reviews(file_path: String, review_set: &mut HashMap<u32, Vec<Review>>) {
+    let file = fs::File::open(file_path).unwrap();
+    let reader = BufReader::new(file);
+    let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
+    let collection = &val["reviewDetails"]["reviewCollection"]["review"];
+    let num_reviews = val["reviewDetails"]["numberOfReviewsInThisPage"]
+                                .as_u64().unwrap() as usize;
+    if num_reviews > 0 {
+        let mut reviews: Vec<Review> = vec![];
+        for i in 0..num_reviews {
+            let hotel_id: u32 = collection[i]["hotelId"]
+                                .as_str().unwrap().parse().unwrap();
+            let review_id = collection[i]["reviewId"]
+                                .as_str().unwrap().to_string();
+            let rating: u32 = collection[i]["ratingOverall"]
+                                .to_string().parse().unwrap();
+            let author = collection[i]["userNickname"]
+                                .as_str().unwrap().to_string();
+            let title = collection[i]["title"]
+                                .as_str().unwrap().to_string();
+            let text = collection[i]["reviewText"]
+                                .as_str().unwrap().to_string();
+            let time = collection[i]["reviewSubmissionTime"]
+                                .as_str().unwrap().to_string();
+        
+            reviews.push(
+                Review { hotel_id, review_id, rating,
+                        author, title, text, time }
+            );
+        }
+        review_set.insert(reviews[0].hotel_id, reviews);
     }
 }
 
@@ -123,59 +153,48 @@ struct Review {
     time: String,
 }
 
-fn traverse_dir(root_dir: String, files_list:  &mut Vec<String>) {
-    let entries = fs::read_dir(root_dir).unwrap();
+fn traverse_dir(dir_path: String, review_set: &mut HashMap<u32, Vec<Review>>) {
+    let entries = fs::read_dir(dir_path).unwrap();
 
     for entry in entries {
         let entry_path = entry.as_ref().unwrap()
-                                    .path().as_path().to_owned();
-        if entry.as_ref().unwrap().path().is_dir() {
-            traverse_dir(
-                entry_path.into_os_string().into_string().unwrap(),
-                files_list
-            );
-        } else {
-            let file_extension = entry_path.extension().unwrap_or(
+            .path().into_os_string().into_string().unwrap();
+        let entry_extention = entry.as_ref().unwrap()
+            .path().extension().unwrap_or(
                 OsStr::new("No Extension")
-            );
-            
-            if file_extension == "json" {
-                files_list.push(
-                    entry_path.file_name().unwrap()
-                    .to_os_string().into_string().unwrap()
-                );
-            }
+            ).to_os_string().into_string().unwrap();    
+                                    
+        if entry.as_ref().unwrap().path().is_dir() {
+            traverse_dir(entry_path, review_set);
+        } else if entry_extention == "json" {
+            process_reviews(entry_path, review_set);
         }
     }
 }
 
-fn mt_traverse_dir(root_dir: String, files_list:  Arc<Mutex<Vec<String>>>) {
-    let entries = fs::read_dir(&root_dir).unwrap();
+fn mt_traverse_dir(dir_path: String, review_set: Arc<Mutex<HashMap<u32, Vec<Review>>>>) {
+    let entries = fs::read_dir(&dir_path).unwrap();
     let mut handles = vec![];
 
     for entry in entries {
         let entry_path = entry.as_ref().unwrap()
-                                    .path().as_path().to_owned();
-        if entry.as_ref().unwrap().path().is_dir() {
-            let files_list = files_list.clone();
-            let root_dir = entry_path.into_os_string()
-                                        .into_string().unwrap();
+            .path().into_os_string().into_string().unwrap();
+        let entry_extention = entry.as_ref().unwrap()
+            .path().extension().unwrap_or(
+                OsStr::new("No Extension")
+            ).to_os_string().into_string().unwrap();
+        let review_set = review_set.clone();
 
+        if entry.as_ref().unwrap().path().is_dir() {
             let handle = thread::spawn(
-                move || {mt_traverse_dir(root_dir, files_list)}
+                move || {mt_traverse_dir(entry_path, review_set)}
             );
             handles.push(handle);
-        } else {
-            let file_extension = entry_path.extension().unwrap_or(
-                OsStr::new("No Extension")
+        } else if entry_extention == "json" {    
+            let handle = thread::spawn(
+                move || {mt_process_reviews(entry_path, review_set);}
             );
-            
-            if file_extension == "json" {
-                files_list.lock().unwrap().push(
-                    entry_path.file_name().unwrap()
-                    .to_os_string().into_string().unwrap()
-                );
-            }
+            handles.push(handle);
         }
     }
 
