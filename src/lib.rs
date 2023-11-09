@@ -23,6 +23,17 @@ impl Config {
     }
 }
 
+
+#[derive(Debug)]
+pub struct Hotel {
+    pub hotel_id: u32,
+    pub name: String,
+    pub address: String,
+    pub city: String,
+    pub province: String,
+    pub country: String,
+}
+
 #[derive(Debug)]
 pub struct Review {
     pub hotel_id: u32,
@@ -37,6 +48,85 @@ pub struct Review {
 // ****************************************************************************
 //                              Multithreading Approach
 // ****************************************************************************
+
+/**
+ * Multithreading approach to process hotel files
+ * 
+ * # Parameters:
+ * - 'file_path': A string containing the file path to be processed.
+ * - 'hotels_set': Hashmap to be populated with hotel ids (key) and their
+ *      corresponding hotel (value). Hashmap held in Mutex to prevent
+ *      race conditions, and Arc used to allow multiple thread-safe references.
+ */
+pub fn mt_process_hotels(file_path: String, hotels_set: Arc<Mutex<HashMap<u32, Hotel>>>) {
+    let file = fs::File::open(file_path).unwrap();
+    let reader = BufReader::new(file);
+    let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
+    let collection = &val["sr"];
+    let num_hotels = collection.as_array().unwrap().len();
+
+    for i in 0..num_hotels {
+        let hotel_id: u32 = collection[i]["id"]
+            .as_str().unwrap().parse().unwrap();
+        let name = collection[i]["f"]
+            .as_str().unwrap().to_string();
+        let address = collection[i]["ad"]
+            .as_str().unwrap().to_string();
+        let city = collection[i]["ci"]
+            .as_str().unwrap().to_string();
+        let province = collection[i]["pr"]
+            .as_str().unwrap().to_string();
+        let country = collection[i]["c"]
+            .as_str().unwrap().to_string();
+    
+       hotels_set.lock().unwrap().insert(
+            hotel_id,
+            Hotel {hotel_id, name, address,
+                city, province, country}
+        );
+    }
+}
+
+/**
+ * Multithreading approach to traversing directories
+ * 
+ * # Parameters:
+ * - 'dir_path': A string containing the directory path to be traversed.
+ * - 'reviews_set': Hashmap to be populated with hotel ids (key) and their
+ *      corresponding reviews (value). Hashmap held in Mutex to prevent
+ *      race conditions, and Arc used to allow multiple thread-safe references.
+ */
+pub fn mt_traverse_h_dir(dir_path: String, hotels_set: Arc<Mutex<HashMap<u32, Hotel>>>) {
+    let entries = fs::read_dir(&dir_path).unwrap();
+    let mut handles = vec![];
+
+    for entry in entries {
+        let entry_path = entry.as_ref().unwrap()
+            .path().into_os_string().into_string().unwrap();
+        let entry_extention = entry.as_ref().unwrap()
+            .path().extension().unwrap_or(
+                OsStr::new("No Extension")
+            ).to_os_string().into_string().unwrap();
+        let hotels_set = hotels_set.clone();
+
+        if entry.as_ref().unwrap().path().is_dir() {
+            let handle = thread::spawn(
+                move || {mt_traverse_h_dir(entry_path, hotels_set);}
+            );
+            handles.push(handle);
+        } else if entry_extention == "json" {    
+            let handle = thread::spawn(
+                move || {mt_process_hotels(entry_path, hotels_set);}
+            );
+            handles.push(handle);
+        }
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+
 
 /**
  * Multithreading approach to process review files

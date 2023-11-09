@@ -19,13 +19,13 @@ fn main() {
 
     let mut args = env::args();
     args.next();
-    args.next();
-    let dir_path = args.next().unwrap();
+    let h_dir_path = args.next().unwrap();
+    let r_dir_path = args.next().unwrap();
     
     // Multithreading approach
     let mut reviews_map: Arc<Mutex<HashMap<u32, Vec<Review>>>> = 
         Arc::new(Mutex::new(HashMap::new()));
-    let reviews_dir_path = dir_path.clone();    
+    let reviews_dir_path = r_dir_path.clone();    
     let files_c = reviews_map.clone();
 
     let start = Instant::now();
@@ -35,14 +35,28 @@ fn main() {
     handle.join().unwrap();
     let duration = start.elapsed();
 
-    println!("\nMultiThreading Duration: {:#?}", duration);
+    println!("\nMultiThreading Reviews Parsing Duration: {:#?}", duration);
 
-    // Recursive approach
-    let mut reviews_map: HashMap<u32, Vec<Review>> = HashMap::new();
-    let reviews_dir_path = dir_path.clone();
+    let mut hotels_map: Arc<Mutex<HashMap<u32, Hotel>>> = 
+        Arc::new(Mutex::new(HashMap::new()));
+    let hotels_dir_path = h_dir_path.clone();    
+    let files_c = hotels_map.clone();
 
     let start = Instant::now();
-    traverse_dir(reviews_dir_path, &mut reviews_map);
+    let handle = thread::spawn(
+        move || {mt_traverse_h_dir(hotels_dir_path, files_c)}
+    );
+    handle.join().unwrap();
     let duration = start.elapsed();
-    println!("Recursive Duration: {:#?}", duration);
+
+    println!("\nMultiThreading Hotels Parsing Duration: {:#?}", duration);
+
+    // Recursive approach
+    // let mut reviews_map: HashMap<u32, Vec<Review>> = HashMap::new();
+    // let reviews_dir_path = dir_path.clone();
+
+    // let start = Instant::now();
+    // traverse_dir(reviews_dir_path, &mut reviews_map);
+    // let duration = start.elapsed();
+    // println!("Recursive Duration: {:#?}", duration);
 }
