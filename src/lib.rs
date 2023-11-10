@@ -23,6 +23,19 @@ impl Config {
     }
 }
 
+pub enum Data {
+    Hotels,
+    Reviews,
+}
+
+impl Data {
+    pub fn copy(&self) -> Data {
+        match self {
+            Data::Hotels => Data::Hotels,
+            Data::Reviews => Data::Reviews,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Hotel {
@@ -71,23 +84,32 @@ impl Review {
     }
 }
 
-pub struct HotelInfo {
+pub struct HotelsInfo {
     hotels_map: HashMap<u32, Hotel>,
     reviews_map: HashMap<u32, Vec<Review>>,
 }
 
-impl HotelInfo {
+impl HotelsInfo {
+    pub fn new() -> HotelsInfo {
+        let hotels: HashMap<u32, Hotel> = HashMap::new();
+        let reviews: HashMap<u32, Vec<Review>> = HashMap::new();
+        return HotelsInfo { hotels_map: hotels, reviews_map: reviews };
+    }
+
     pub fn add_hotels(&mut self, hotels: HashMap<u32, Hotel>) {
         self.hotels_map.extend(hotels);
     }
 
-    pub fn add_reviews(&mut self, reviews: HashMap<u32, Vec<Review>>) {
-        let _ = reviews.into_iter().map(|(k, v)| {
-            match self.reviews_map.contains_key(&k) {
-                true => {self.reviews_map.get_mut(&k).unwrap().extend(v);}
-                false => {self.reviews_map.insert(k, v);},
+    pub fn add_reviews(&mut self, hotel_id: u32, reviews: Vec<Review>) {
+        match self.reviews_map.contains_key(&hotel_id) {
+            true => {
+                self.reviews_map.get_mut(&hotel_id)
+                    .unwrap().extend(reviews);
             }
-        });
+            false => {
+                self.reviews_map.insert(hotel_id, reviews);
+            }
+        };
     }
 
     pub fn search_hotels(&self, hotel_id: u32) -> Option<Hotel> {
@@ -116,6 +138,52 @@ impl HotelInfo {
 // ****************************************************************************
 
 /**
+ * Multithreading approach to traversing directories
+ * 
+ * # Parameters:
+ * - 'dir_path': A string containing the directory path to be traversed.
+ * - 'reviews_set': Hashmap to be populated with hotel ids (key) and their
+ *      corresponding reviews (value). Hashmap held in Mutex to prevent
+ *      race conditions, and Arc used to allow multiple thread-safe references.
+ */
+pub fn mt_traverse_dir(
+    dir_path: String, hotels_info: Arc<Mutex<HotelsInfo>>, data: Data) {
+    let entries = fs::read_dir(&dir_path).unwrap();
+    let mut handles = vec![];
+
+    for entry in entries {
+        let entry_extention = entry.as_ref().unwrap()
+            .path().extension().unwrap_or(OsStr::new("No Extension"))
+            .to_os_string().into_string().unwrap();
+        let entry_path = entry.as_ref().unwrap()
+            .path().into_os_string().into_string().unwrap();
+        let hotels_info = hotels_info.clone();
+        let data = data.copy();
+
+        if entry.as_ref().unwrap().path().is_dir() {
+            let handle = thread::spawn(move || {
+                mt_traverse_dir(entry_path, hotels_info, data);
+            });
+            handles.push(handle);
+        } else if entry_extention == "json" {    
+            let handle = match data {
+                Data::Hotels => {thread::spawn(move || {
+                    mt_process_hotels(entry_path, hotels_info)
+                })},
+                Data::Reviews => {thread::spawn(move || {
+                    mt_process_reviews(entry_path, hotels_info)
+                })},
+            };
+            handles.push(handle);
+        }
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+
+/**
  * Multithreading approach to process hotel files
  * 
  * # Parameters:
@@ -124,12 +192,14 @@ impl HotelInfo {
  *      corresponding hotel (value). Hashmap held in Mutex to prevent
  *      race conditions, and Arc used to allow multiple thread-safe references.
  */
-pub fn mt_process_hotels(file_path: String, hotels_set: Arc<Mutex<HashMap<u32, Hotel>>>) {
+pub fn mt_process_hotels(
+    file_path: String, hotels_info: Arc<Mutex<HotelsInfo>>) {
     let file = fs::File::open(file_path).unwrap();
     let reader = BufReader::new(file);
     let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
     let collection = &val["sr"];
     let num_hotels = collection.as_array().unwrap().len();
+    let mut hotels: HashMap<u32, Hotel> = HashMap::new();
 
     for i in 0..num_hotels {
         let hotel_id: u32 = collection[i]["id"]
@@ -145,54 +215,14 @@ pub fn mt_process_hotels(file_path: String, hotels_set: Arc<Mutex<HashMap<u32, H
         let country = collection[i]["c"]
             .as_str().unwrap().to_string();
     
-       hotels_set.lock().unwrap().insert(
+        hotels.insert(
             hotel_id,
             Hotel {hotel_id, name, address,
                 city, province, country}
         );
     }
+    hotels_info.lock().unwrap().add_hotels(hotels);
 }
-
-/**
- * Multithreading approach to traversing directories
- * 
- * # Parameters:
- * - 'dir_path': A string containing the directory path to be traversed.
- * - 'reviews_set': Hashmap to be populated with hotel ids (key) and their
- *      corresponding reviews (value). Hashmap held in Mutex to prevent
- *      race conditions, and Arc used to allow multiple thread-safe references.
- */
-pub fn mt_traverse_h_dir(dir_path: String, hotels_set: Arc<Mutex<HashMap<u32, Hotel>>>) {
-    let entries = fs::read_dir(&dir_path).unwrap();
-    let mut handles = vec![];
-
-    for entry in entries {
-        let entry_path = entry.as_ref().unwrap()
-            .path().into_os_string().into_string().unwrap();
-        let entry_extention = entry.as_ref().unwrap()
-            .path().extension().unwrap_or(
-                OsStr::new("No Extension")
-            ).to_os_string().into_string().unwrap();
-        let hotels_set = hotels_set.clone();
-
-        if entry.as_ref().unwrap().path().is_dir() {
-            let handle = thread::spawn(
-                move || {mt_traverse_h_dir(entry_path, hotels_set);}
-            );
-            handles.push(handle);
-        } else if entry_extention == "json" {    
-            let handle = thread::spawn(
-                move || {mt_process_hotels(entry_path, hotels_set);}
-            );
-            handles.push(handle);
-        }
-    }
-
-    for handle in handles {
-        handle.join().unwrap();
-    }
-}
-
 
 /**
  * Multithreading approach to process review files
@@ -203,7 +233,8 @@ pub fn mt_traverse_h_dir(dir_path: String, hotels_set: Arc<Mutex<HashMap<u32, Ho
  *      corresponding reviews (values). Hashmap held in Mutex to prevent
  *      race conditions, and Arc used to allow multiple thread-safe references.
  */
-pub fn mt_process_reviews(file_path: String, reviews_set: Arc<Mutex<HashMap<u32, Vec<Review>>>>) {
+pub fn mt_process_reviews(
+    file_path: String, hotels_info: Arc<Mutex<HotelsInfo>>) {
     let file = fs::File::open(file_path).unwrap();
     let reader = BufReader::new(file);
     let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
@@ -233,47 +264,7 @@ pub fn mt_process_reviews(file_path: String, reviews_set: Arc<Mutex<HashMap<u32,
                         author, title, text, time }
             );
         }
-        reviews_set.lock().unwrap().insert(reviews[0].hotel_id, reviews);
-    }
-}
-
-/**
- * Multithreading approach to traversing directories
- * 
- * # Parameters:
- * - 'dir_path': A string containing the directory path to be traversed.
- * - 'reviews_set': Hashmap to be populated with hotel ids (keys) and their
- *      corresponding reviews (values). Hashmap held in Mutex to prevent
- *      race conditions, and Arc used to allow multiple thread-safe references.
- */
-pub fn mt_traverse_dir(dir_path: String, reviews_set: Arc<Mutex<HashMap<u32, Vec<Review>>>>) {
-    let entries = fs::read_dir(&dir_path).unwrap();
-    let mut handles = vec![];
-
-    for entry in entries {
-        let entry_path = entry.as_ref().unwrap()
-            .path().into_os_string().into_string().unwrap();
-        let entry_extention = entry.as_ref().unwrap()
-            .path().extension().unwrap_or(
-                OsStr::new("No Extension")
-            ).to_os_string().into_string().unwrap();
-        let reviews_set = reviews_set.clone();
-
-        if entry.as_ref().unwrap().path().is_dir() {
-            let handle = thread::spawn(
-                move || {mt_traverse_dir(entry_path, reviews_set);}
-            );
-            handles.push(handle);
-        } else if entry_extention == "json" {    
-            let handle = thread::spawn(
-                move || {mt_process_reviews(entry_path, reviews_set);}
-            );
-            handles.push(handle);
-        }
-    }
-
-    for handle in handles {
-        handle.join().unwrap();
+        hotels_info.lock().unwrap().add_reviews(reviews[0].hotel_id, reviews);
     }
 }
 
@@ -282,7 +273,7 @@ pub fn mt_traverse_dir(dir_path: String, reviews_set: Arc<Mutex<HashMap<u32, Vec
 // ****************************************************************************
 
 
-pub fn traverse_dir(dir_path: String, reviews_set: &mut HashMap<u32, Vec<Review>>) {
+pub fn r_traverse_dir(dir_path: String, hotels_info: &mut HotelsInfo, data: &Data) {
     let entries = fs::read_dir(dir_path).unwrap();
 
     for entry in entries {
@@ -291,17 +282,20 @@ pub fn traverse_dir(dir_path: String, reviews_set: &mut HashMap<u32, Vec<Review>
         let entry_extention = entry.as_ref().unwrap()
             .path().extension().unwrap_or(
                 OsStr::new("No Extension")
-            ).to_os_string().into_string().unwrap();    
+            ).to_os_string().into_string().unwrap();
                                     
         if entry.as_ref().unwrap().path().is_dir() {
-            traverse_dir(entry_path, reviews_set);
+            r_traverse_dir(entry_path, hotels_info, data);
         } else if entry_extention == "json" {
-            process_reviews(entry_path, reviews_set);
+            match data {
+                Data::Hotels => r_process_hotels(entry_path, hotels_info),
+                Data::Reviews => r_process_reviews(entry_path, hotels_info),
+            };
         }
     }
 }
 
-pub fn process_reviews(file_path: String, reviews_set: &mut HashMap<u32, Vec<Review>>) {
+pub fn r_process_reviews(file_path: String, hotels_info: &mut HotelsInfo) {
     let file = fs::File::open(file_path).unwrap();
     let reader = BufReader::new(file);
     let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
@@ -331,6 +325,37 @@ pub fn process_reviews(file_path: String, reviews_set: &mut HashMap<u32, Vec<Rev
                         author, title, text, time }
             );
         }
-        reviews_set.insert(reviews[0].hotel_id, reviews);
+        hotels_info.add_reviews(reviews[0].hotel_id, reviews);
     }
+}
+
+pub fn r_process_hotels(file_path: String, hotels_info: &mut HotelsInfo) {
+    let file = fs::File::open(file_path).unwrap();
+    let reader = BufReader::new(file);
+    let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
+    let collection = &val["sr"];
+    let num_hotels = collection.as_array().unwrap().len();
+    let mut hotels: HashMap<u32, Hotel> = HashMap::new();
+
+    for i in 0..num_hotels {
+        let hotel_id: u32 = collection[i]["id"]
+            .as_str().unwrap().parse().unwrap();
+        let name = collection[i]["f"]
+            .as_str().unwrap().to_string();
+        let address = collection[i]["ad"]
+            .as_str().unwrap().to_string();
+        let city = collection[i]["ci"]
+            .as_str().unwrap().to_string();
+        let province = collection[i]["pr"]
+            .as_str().unwrap().to_string();
+        let country = collection[i]["c"]
+            .as_str().unwrap().to_string();
+    
+        hotels.insert(
+            hotel_id,
+            Hotel {hotel_id, name, address,
+                city, province, country}
+        );
+    }
+    hotels_info.add_hotels(hotels);
 }

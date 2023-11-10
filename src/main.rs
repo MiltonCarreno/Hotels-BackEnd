@@ -2,7 +2,6 @@ use std::env;
 use std::sync::{ Arc, Mutex };
 use std::thread;
 use std::time::Instant;
-use std::collections::HashMap;
 
 use data_parser::*;
 
@@ -23,43 +22,60 @@ fn main() {
     let r_dir_path = args.next().unwrap();
     
     // Multithreading approach
-
+    
+    // HotelInfo Struct
+    let mut info: Arc<Mutex<HotelsInfo>> = 
+        Arc::new(Mutex::new(HotelsInfo::new()));
+        
     // Reviews Files Parsing
-    let mut reviews_map: Arc<Mutex<HashMap<u32, Vec<Review>>>> = 
-        Arc::new(Mutex::new(HashMap::new()));
-    let reviews_dir_path = r_dir_path.clone();    
-    let files_c = reviews_map.clone();
-
+    let reviews_dir_path = r_dir_path.clone();
+    let info_copy = info.clone();
+    let data = Data::Reviews;
+        
     let start = Instant::now();
-    let handle = thread::spawn(
-        move || {mt_traverse_dir(reviews_dir_path, files_c)}
-    );
+    let handle = thread::spawn(move || {
+        mt_traverse_dir(reviews_dir_path, info_copy, data)
+    });
     handle.join().unwrap();
-    let duration = start.elapsed();
+    let r_duration = start.elapsed();
 
-    println!("\nMultiThreading Reviews Parsing Duration: {:#?}", duration);
-    
     // Hotels Files Parsing
-    let mut hotels_map: Arc<Mutex<HashMap<u32, Hotel>>> = 
-        Arc::new(Mutex::new(HashMap::new()));
     let hotels_dir_path = h_dir_path.clone();
-    let files_c = hotels_map.clone();
-
+    let info_copy = info.clone();
+    let data = Data::Hotels;
+        
     let start = Instant::now();
-    let handle = thread::spawn(
-        move || {mt_traverse_h_dir(hotels_dir_path, files_c)}
-    );
+    let handle = thread::spawn(move || {
+        mt_traverse_dir(hotels_dir_path, info_copy, data)
+    });
     handle.join().unwrap();
-    let duration = start.elapsed();
-    
-    println!("MultiThreading Hotels Parsing Duration: {:#?}", duration);
+    let h_duration = start.elapsed();
+
+    println!("\nMultiThreading (Reviews) Duration: {:#?}", r_duration);
+    println!("MultiThreading (Hotels) Duration: {:#?}", h_duration);
+
+    // println!("\nReview: {:#?}", info.lock().unwrap().search_reviews(10323).unwrap().len());
+    // println!("\nHotel: {:#?}", info.lock().unwrap().search_hotels(10323));
 
     // Recursive approach
-    // let mut reviews_map: HashMap<u32, Vec<Review>> = HashMap::new();
-    // let reviews_dir_path = dir_path.clone();
+    let mut info2 = HotelsInfo::new();
+    let reviews_dir_path = r_dir_path.clone();
+    let data = Data::Reviews;
 
-    // let start = Instant::now();
-    // traverse_dir(reviews_dir_path, &mut reviews_map);
-    // let duration = start.elapsed();
-    // println!("Recursive Duration: {:#?}", duration);
+    let start = Instant::now();
+    r_traverse_dir(reviews_dir_path, &mut info2, &data);
+    let r_duration = start.elapsed();
+
+    let hotels_dir_path = h_dir_path.clone();
+    let data = Data::Hotels;
+
+    let start = Instant::now();
+    r_traverse_dir(hotels_dir_path, &mut info2, &data);
+    let h_duration = start.elapsed();
+
+    println!("\nRecursive (Reviews) Duration: {:#?}", r_duration);
+    println!("Recursive (Hotels) Duration: {:#?}\n", h_duration);
+
+    // println!("\nReview: {:#?}", info2.search_reviews(10323).unwrap().len());
+    // println!("\nHotel: {:#?}", info2.search_hotels(10323));
 }
