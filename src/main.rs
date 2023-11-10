@@ -23,6 +23,8 @@ fn main() {
     let r_dir_path = args.next().unwrap();
     
     // Multithreading approach
+
+    // Reviews Files Parsing
     let mut reviews_map: Arc<Mutex<HashMap<u32, Vec<Review>>>> = 
         Arc::new(Mutex::new(HashMap::new()));
     let reviews_dir_path = r_dir_path.clone();    
@@ -36,10 +38,11 @@ fn main() {
     let duration = start.elapsed();
 
     println!("\nMultiThreading Reviews Parsing Duration: {:#?}", duration);
-
+    
+    // Hotels Files Parsing
     let mut hotels_map: Arc<Mutex<HashMap<u32, Hotel>>> = 
         Arc::new(Mutex::new(HashMap::new()));
-    let hotels_dir_path = h_dir_path.clone();    
+    let hotels_dir_path = h_dir_path.clone();
     let files_c = hotels_map.clone();
 
     let start = Instant::now();
@@ -48,8 +51,8 @@ fn main() {
     );
     handle.join().unwrap();
     let duration = start.elapsed();
-
-    println!("\nMultiThreading Hotels Parsing Duration: {:#?}", duration);
+    
+    println!("MultiThreading Hotels Parsing Duration: {:#?}", duration);
 
     // Recursive approach
     // let mut reviews_map: HashMap<u32, Vec<Review>> = HashMap::new();
