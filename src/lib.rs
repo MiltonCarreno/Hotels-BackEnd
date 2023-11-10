@@ -12,13 +12,25 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(args: &Vec<String>) -> Result<Config, &'static str>{
-        if args.len() != 3 {
-            return Err("Incorrect number of arguments");
+    pub fn build(mut args: impl Iterator<Item = String>
+    ) -> Result<Config, &'static str> {
+        args.next();
+        
+        if args.size_hint().0 != 2 {
+            return Err("Wrong number of arguments, only need 2 arguments \
+            (i.e. 'hotels' and 'reviews' directory paths)");
         }
+        
+        let hotels_path = match args.next() {
+            Some(path) => path,
+            None => return Err("Didn't get 'hotels' directory path"),
+        };
 
-        let hotels_path = args[1].clone();
-        let reviews_path = args[2].clone();
+        let reviews_path = match args.next() {
+            Some(path) => path,
+            None => return Err("Didn't get 'reviews' directory path"),
+        };
+
         return Ok(Config {hotels_path, reviews_path});
     }
 }
@@ -148,7 +160,7 @@ impl HotelsInfo {
  */
 pub fn mt_traverse_dir(
     dir_path: String, hotels_info: Arc<Mutex<HotelsInfo>>, data: Data) {
-    let entries = fs::read_dir(&dir_path).unwrap();
+    let entries = fs::read_dir(dir_path).unwrap();
     let mut handles = vec![];
 
     for entry in entries {
@@ -181,47 +193,6 @@ pub fn mt_traverse_dir(
     for handle in handles {
         handle.join().unwrap();
     }
-}
-
-/**
- * Multithreading approach to process hotel files
- * 
- * # Parameters:
- * - 'file_path': A string containing the file path to be processed.
- * - 'hotels_set': Hashmap to be populated with hotel ids (key) and their
- *      corresponding hotel (value). Hashmap held in Mutex to prevent
- *      race conditions, and Arc used to allow multiple thread-safe references.
- */
-pub fn mt_process_hotels(
-    file_path: String, hotels_info: Arc<Mutex<HotelsInfo>>) {
-    let file = fs::File::open(file_path).unwrap();
-    let reader = BufReader::new(file);
-    let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
-    let collection = &val["sr"];
-    let num_hotels = collection.as_array().unwrap().len();
-    let mut hotels: HashMap<u32, Hotel> = HashMap::new();
-
-    for i in 0..num_hotels {
-        let hotel_id: u32 = collection[i]["id"]
-            .as_str().unwrap().parse().unwrap();
-        let name = collection[i]["f"]
-            .as_str().unwrap().to_string();
-        let address = collection[i]["ad"]
-            .as_str().unwrap().to_string();
-        let city = collection[i]["ci"]
-            .as_str().unwrap().to_string();
-        let province = collection[i]["pr"]
-            .as_str().unwrap().to_string();
-        let country = collection[i]["c"]
-            .as_str().unwrap().to_string();
-    
-        hotels.insert(
-            hotel_id,
-            Hotel {hotel_id, name, address,
-                city, province, country}
-        );
-    }
-    hotels_info.lock().unwrap().add_hotels(hotels);
 }
 
 /**
@@ -266,6 +237,47 @@ pub fn mt_process_reviews(
         }
         hotels_info.lock().unwrap().add_reviews(reviews[0].hotel_id, reviews);
     }
+}
+
+/**
+ * Multithreading approach to process hotel files
+ * 
+ * # Parameters:
+ * - 'file_path': A string containing the file path to be processed.
+ * - 'hotels_set': Hashmap to be populated with hotel ids (key) and their
+ *      corresponding hotel (value). Hashmap held in Mutex to prevent
+ *      race conditions, and Arc used to allow multiple thread-safe references.
+ */
+pub fn mt_process_hotels(
+    file_path: String, hotels_info: Arc<Mutex<HotelsInfo>>) {
+    let file = fs::File::open(file_path).unwrap();
+    let reader = BufReader::new(file);
+    let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
+    let collection = &val["sr"];
+    let num_hotels = collection.as_array().unwrap().len();
+    let mut hotels: HashMap<u32, Hotel> = HashMap::new();
+
+    for i in 0..num_hotels {
+        let hotel_id: u32 = collection[i]["id"]
+            .as_str().unwrap().parse().unwrap();
+        let name = collection[i]["f"]
+            .as_str().unwrap().to_string();
+        let address = collection[i]["ad"]
+            .as_str().unwrap().to_string();
+        let city = collection[i]["ci"]
+            .as_str().unwrap().to_string();
+        let province = collection[i]["pr"]
+            .as_str().unwrap().to_string();
+        let country = collection[i]["c"]
+            .as_str().unwrap().to_string();
+    
+        hotels.insert(
+            hotel_id,
+            Hotel {hotel_id, name, address,
+                city, province, country}
+        );
+    }
+    hotels_info.lock().unwrap().add_hotels(hotels);
 }
 
 // ****************************************************************************

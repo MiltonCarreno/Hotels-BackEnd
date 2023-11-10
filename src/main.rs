@@ -1,4 +1,5 @@
 use std::env;
+use std::process;
 use std::sync::{ Arc, Mutex };
 use std::thread;
 use std::time::Instant;
@@ -6,24 +7,28 @@ use std::time::Instant;
 use data_parser::*;
 
 fn main() {
-    // let args: Vec<String> = env::args().collect();
-    // println!("\nArgs Len: {} \nPath 1: {} \nPath 2: {}",
-    // args.len(), args[1], args[2]);
-
-    // let config = Config::build(&args);
-    // if let Err(e) = config {
-    //     println!("Error: {e}");
-    //     process::exit(1);
-    // }
-
-    let mut args = env::args();
-    args.next();
-    let h_dir_path = args.next().unwrap();
-    let r_dir_path = args.next().unwrap();
+    // Parse arguments
+    let config = Config::build(env::args())
+        .unwrap_or_else(|err| {
+            println!("\nError parsing arguments: {err}\n");
+            process::exit(1);
+        });
     
     // Multithreading approach
-    
-    // HotelInfo Struct
+    mt_processing(
+        &config.reviews_path,
+        &config.hotels_path,
+    );
+
+    // Recursive approach
+    r_processing(
+        &config.reviews_path,
+        &config.hotels_path,
+    );
+}
+
+fn mt_processing(r_dir_path: &String, h_dir_path: &String) {
+    // HotelsInfo Struct
     let mut info: Arc<Mutex<HotelsInfo>> = 
         Arc::new(Mutex::new(HotelsInfo::new()));
         
@@ -56,12 +61,15 @@ fn main() {
 
     // println!("\nReview: {:#?}", info.lock().unwrap().search_reviews(10323).unwrap().len());
     // println!("\nHotel: {:#?}", info.lock().unwrap().search_hotels(10323));
+}
 
-    // Recursive approach
+fn r_processing(r_dir_path: &String, h_dir_path: &String) {
+    // HotelsInfo Struct
     let mut info2 = HotelsInfo::new();
     let reviews_dir_path = r_dir_path.clone();
     let data = Data::Reviews;
 
+    // Reviews Parsing
     let start = Instant::now();
     r_traverse_dir(reviews_dir_path, &mut info2, &data);
     let r_duration = start.elapsed();
@@ -69,6 +77,7 @@ fn main() {
     let hotels_dir_path = h_dir_path.clone();
     let data = Data::Hotels;
 
+    // Hotels Parsing
     let start = Instant::now();
     r_traverse_dir(hotels_dir_path, &mut info2, &data);
     let h_duration = start.elapsed();
