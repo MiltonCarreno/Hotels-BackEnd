@@ -2,9 +2,15 @@ use std::env;
 use std::process;
 use std::sync::{ Arc, Mutex };
 use std::thread;
-use std::time::Instant;
 
-use data_parser::*;
+mod config;
+mod hotels_info;
+
+use config::Config;
+use data_parser::hotels_info::HotelsInfo;
+use data_parser::r_traverse_dir;
+use data_parser::mt_traverse_dir;
+use data_parser::Data;
 
 fn main() {
     // Parse arguments
@@ -29,62 +35,47 @@ fn main() {
 
 fn mt_processing(r_dir_path: &String, h_dir_path: &String) {
     // HotelsInfo Struct
-    let mut info: Arc<Mutex<HotelsInfo>> = 
+    let info: Arc<Mutex<HotelsInfo>> = 
         Arc::new(Mutex::new(HotelsInfo::new()));
-        
+
     // Reviews Files Parsing
-    let reviews_dir_path = r_dir_path.clone();
-    let info_copy = info.clone();
-    let data = Data::Reviews;
-        
-    let start = Instant::now();
+    let rev_dir_path = r_dir_path.clone();
+    let hotels_info = info.clone();
     let handle = thread::spawn(move || {
-        mt_traverse_dir(reviews_dir_path, info_copy, data)
+        mt_traverse_dir(rev_dir_path, hotels_info, Data::Reviews)
     });
     handle.join().unwrap();
-    let r_duration = start.elapsed();
 
     // Hotels Files Parsing
-    let hotels_dir_path = h_dir_path.clone();
-    let info_copy = info.clone();
-    let data = Data::Hotels;
-        
-    let start = Instant::now();
+    let hot_dir_path = h_dir_path.clone();
+    let hotels_info = info.clone();
     let handle = thread::spawn(move || {
-        mt_traverse_dir(hotels_dir_path, info_copy, data)
+        mt_traverse_dir(hot_dir_path, hotels_info, Data::Hotels)
     });
     handle.join().unwrap();
-    let h_duration = start.elapsed();
 
-    println!("\nMultiThreading (Reviews) Duration: {:#?}", r_duration);
-    println!("MultiThreading (Hotels) Duration: {:#?}", h_duration);
-
-    // println!("\nReview: {:#?}", info.lock().unwrap().search_reviews(10323).unwrap().len());
-    // println!("\nHotel: {:#?}", info.lock().unwrap().search_hotels(10323));
+    println!("\nMultithreading Approach: {:#?}", 
+        info.lock().unwrap().search_hotels(20191).unwrap());
+    println!("\nMultithreading Approach: {:#?}", 
+        info.lock().unwrap().search_reviews(20191).unwrap()[10]);
 }
 
 fn r_processing(r_dir_path: &String, h_dir_path: &String) {
     // HotelsInfo Struct
-    let mut info2 = HotelsInfo::new();
-    let reviews_dir_path = r_dir_path.clone();
-    let data = Data::Reviews;
+    let mut info = HotelsInfo::new();
 
     // Reviews Parsing
-    let start = Instant::now();
-    r_traverse_dir(reviews_dir_path, &mut info2, &data);
-    let r_duration = start.elapsed();
-
-    let hotels_dir_path = h_dir_path.clone();
-    let data = Data::Hotels;
+    r_traverse_dir(
+        r_dir_path.clone(), &mut info, &Data::Reviews
+    );
 
     // Hotels Parsing
-    let start = Instant::now();
-    r_traverse_dir(hotels_dir_path, &mut info2, &data);
-    let h_duration = start.elapsed();
+    r_traverse_dir(
+        h_dir_path.clone(), &mut info, &Data::Hotels
+    );
 
-    println!("\nRecursive (Reviews) Duration: {:#?}", r_duration);
-    println!("Recursive (Hotels) Duration: {:#?}\n", h_duration);
-
-    // println!("\nReview: {:#?}", info2.search_reviews(10323).unwrap().len());
-    // println!("\nHotel: {:#?}", info2.search_hotels(10323));
+    println!("\nRecursive Approach: {:#?}", 
+        info.search_hotels(20191).unwrap());
+    println!("\nRecursive Approach: {:#?}", 
+        info.search_reviews(20191).unwrap()[10]);
 }
