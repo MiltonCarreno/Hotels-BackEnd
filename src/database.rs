@@ -56,3 +56,39 @@ pub async fn add_users(app_state: web::Data<AppState>) -> HttpResponse {
         Err(_) => HttpResponse::BadRequest().into(),
     }
 }
+
+pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
+) -> HttpResponse {
+    let user_id: usize = path.into_inner();
+
+    #[derive(sqlx::FromRow, Serialize)]
+    struct User {
+        id: i32,
+        username: String,
+        email: String,
+    }
+
+    let user: Result<Option<User>> = sqlx::query_as(
+        "select * from users where id = ?"
+    ).bind(user_id as u64)
+    .fetch_optional(&app_state.pool).await;
+
+    match user {
+        Ok(_) => HttpResponse::Ok().json(user.unwrap()),
+        Err(_) => HttpResponse::BadRequest().into(),
+    }
+}
+
+pub async fn delete_user(path: web::Path<usize>, app_state: web::Data<AppState>
+) -> HttpResponse {
+    let user_id: usize = path.into_inner();
+
+    let deleted: sqlx::Result<MySqlQueryResult> = sqlx::query(
+        "delete from users where id = ?"
+    ).bind(user_id as u64).execute(&app_state.pool).await;
+
+    match deleted {
+        Ok(u) => HttpResponse::Ok().into(),
+        Err(_) => HttpResponse::BadRequest().into(),
+    }
+}

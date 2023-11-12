@@ -54,5 +54,7 @@ async fn main() -> std::io::Result<()> {
             .service(create_tbls)
             .service(delete_tbls)
             .service(add_users)
+            .route("/get/{user_id}", web::get().to(get_user))
+            .route("/delete/{user_id}", web::get().to(delete_user))
     }).bind(("127.0.0.1", 8080))?.run().await
 }
