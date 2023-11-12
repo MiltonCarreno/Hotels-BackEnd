@@ -43,3 +43,16 @@ pub async fn delete_tbls(app_state: web::Data<AppState>) -> HttpResponse {
         Err(_) => HttpResponse::BadRequest().into(),
     }
 }
+
+#[get("/add_users")]
+pub async fn add_users(app_state: web::Data<AppState>) -> HttpResponse {
+    let added_users = sqlx::query(
+        "insert into users(username, email) values \
+        ('marc', 'marc@email.de'), ('leon', 'leon@email.de');"
+    ).execute(&app_state.pool).await;
+
+    match added_users {
+        Ok(_) => HttpResponse::Ok().into(),
+        Err(_) => HttpResponse::BadRequest().into(),
+    }
+}

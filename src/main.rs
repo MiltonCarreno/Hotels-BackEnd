@@ -53,5 +53,6 @@ async fn main() -> std::io::Result<()> {
             .route("/", web::get().to(root))
             .service(create_tbls)
             .service(delete_tbls)
+            .service(add_users)
     }).bind(("127.0.0.1", 8080))?.run().await
 }
