@@ -51,5 +51,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(app_state.clone()))
             .route("/", web::get().to(root))
+            .service(create_tbls)
+            .service(delete_tbls)
     }).bind(("127.0.0.1", 8080))?.run().await
 }
