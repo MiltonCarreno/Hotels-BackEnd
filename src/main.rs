@@ -1,81 +1,55 @@
 use std::env;
 use std::process;
-use std::sync::{ Arc, Mutex };
-use std::thread;
+use actix_web::{get, post, web, App, Result,
+    HttpResponse, HttpServer, Responder};
+use serde::{Serialize, Deserialize};
+use sqlx::mysql::MySqlPoolOptions;
+use sqlx::MySqlPool;
 
 mod config;
-mod hotels_info;
+mod database;
 
 use config::Config;
-use data_parser::hotels_info::HotelsInfo;
-use data_parser::r_traverse_dir;
-use data_parser::mt_traverse_dir;
-use data_parser::Data;
+use database::*;
+use data_parser::{mt_processing, r_processing};
+use sqlx::mysql::MySqlQueryResult;
 
-fn main() {
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    // cargo r -- /Users/milton/Desktop/HotelDataParser/data/hotels /Users/milton/Desktop/HotelDataParser/data/reviews
     // Parse arguments
-    let config = Config::build(env::args())
-        .unwrap_or_else(|err| {
-            println!("\nError parsing arguments: {err}\n");
-            process::exit(1);
-        });
+    // let config = Config::build(env::args())
+    //     .unwrap_or_else(|err| {
+    //         println!("\nError parsing arguments: {err}\n");
+    //         process::exit(1);
+    //     });
     
-    // Multithreading approach
-    mt_processing(
-        &config.reviews_path,
-        &config.hotels_path,
-    );
+    // // Multithreading approach
+    // mt_processing(
+    //     &config.reviews_path,
+    //     &config.hotels_path,
+    // );
 
-    // Recursive approach
-    r_processing(
-        &config.reviews_path,
-        &config.hotels_path,
-    );
-}
+    // // Recursive approach
+    // r_processing(
+    //     &config.reviews_path,
+    //     &config.hotels_path,
+    // );
 
-fn mt_processing(r_dir_path: &String, h_dir_path: &String) {
-    // HotelsInfo Struct
-    let info: Arc<Mutex<HotelsInfo>> = 
-        Arc::new(Mutex::new(HotelsInfo::new()));
+    const DB_URL: &str = "mysql://root:123123123@127.0.0.1:3306/hotels_data";
 
-    // Reviews Files Parsing
-    let rev_dir_path = r_dir_path.clone();
-    let hotels_info = info.clone();
-    let handle = thread::spawn(move || {
-        mt_traverse_dir(rev_dir_path, hotels_info, Data::Reviews)
-    });
-    handle.join().unwrap();
+    let pool = MySqlPoolOptions::new()
+        .max_connections(10)
+        .connect(DB_URL)
+        .await
+        .unwrap();
 
-    // Hotels Files Parsing
-    let hot_dir_path = h_dir_path.clone();
-    let hotels_info = info.clone();
-    let handle = thread::spawn(move || {
-        mt_traverse_dir(hot_dir_path, hotels_info, Data::Hotels)
-    });
-    handle.join().unwrap();
+    let app_state = AppState { pool };
 
-    println!("\nMultithreading Approach: {:#?}", 
-        info.lock().unwrap().search_hotels(20191).unwrap());
-    println!("\nMultithreading Approach: {:#?}", 
-        info.lock().unwrap().search_reviews(20191).unwrap()[10]);
-}
-
-fn r_processing(r_dir_path: &String, h_dir_path: &String) {
-    // HotelsInfo Struct
-    let mut info = HotelsInfo::new();
-
-    // Reviews Parsing
-    r_traverse_dir(
-        r_dir_path.clone(), &mut info, &Data::Reviews
-    );
-
-    // Hotels Parsing
-    r_traverse_dir(
-        h_dir_path.clone(), &mut info, &Data::Hotels
-    );
-
-    println!("\nRecursive Approach: {:#?}", 
-        info.search_hotels(20191).unwrap());
-    println!("\nRecursive Approach: {:#?}", 
-        info.search_reviews(20191).unwrap()[10]);
+    HttpServer::new(move || {
+        App::new()
+            .app_data(web::Data::new(app_state.clone()))
+            .route("/", web::get().to(root))
+    }).bind(("127.0.0.1", 8080))?.run().await
 }

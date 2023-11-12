@@ -49,8 +49,8 @@ impl Review {
 }
 
 pub struct HotelsInfo {
-    pub hotels_map: HashMap<u32, Hotel>,
-    pub reviews_map: HashMap<u32, Vec<Review>>,
+    hotels_map: HashMap<u32, Hotel>,
+    reviews_map: HashMap<u32, Vec<Review>>,
 }
 
 impl HotelsInfo {
