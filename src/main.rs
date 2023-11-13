@@ -1,41 +1,34 @@
 use std::env;
 use std::process;
-use actix_web::{get, post, web, App, Result,
-    HttpResponse, HttpServer, Responder};
-use serde::{Serialize, Deserialize};
+use actix_web::{web, App, HttpServer};
 use sqlx::mysql::MySqlPoolOptions;
-use sqlx::MySqlPool;
 
 mod config;
 mod database;
+mod routes;
 
 use config::Config;
 use database::*;
-use data_parser::{mt_processing, r_processing};
-use sqlx::mysql::MySqlQueryResult;
+use routes::*;
+use data_parser::mt_processing;
 
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // cargo r -- /Users/milton/Desktop/HotelDataParser/data/hotels /Users/milton/Desktop/HotelDataParser/data/reviews
     // Parse arguments
-    // let config = Config::build(env::args())
-    //     .unwrap_or_else(|err| {
-    //         println!("\nError parsing arguments: {err}\n");
-    //         process::exit(1);
-    //     });
+    let config = Config::build(env::args())
+        .unwrap_or_else(|err| {
+            println!("\nError parsing arguments: {err}\n");
+            process::exit(1);
+        });
     
-    // // Multithreading approach
-    // mt_processing(
-    //     &config.reviews_path,
-    //     &config.hotels_path,
-    // );
-
-    // // Recursive approach
-    // r_processing(
-    //     &config.reviews_path,
-    //     &config.hotels_path,
-    // );
+    // Multithreading approach
+    let (hotels, reviews) = 
+    mt_processing(
+        &config.reviews_path,
+        &config.hotels_path,
+    );
 
     const DB_URL: &str = "mysql://root:123123123@127.0.0.1:3306/hotels_data";
 
@@ -46,15 +39,23 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     let app_state = AppState { pool };
+    let app_state_c = app_state.clone();
 
-    HttpServer::new(move || {
+    create_tbls(&app_state).await;
+    add_hotels_data(&app_state, hotels).await;
+    add_reviews_data(&app_state, reviews).await;
+    add_users(&app_state).await;
+
+    let server = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(app_state.clone()))
             .route("/", web::get().to(root))
-            .service(create_tbls)
-            .service(delete_tbls)
-            .service(add_users)
-            .route("/get/{user_id}", web::get().to(get_user))
-            .route("/delete/{user_id}", web::get().to(delete_user))
-    }).bind(("127.0.0.1", 8080))?.run().await
+            .service(get_user)
+            .service(delete_user)
+            .service(add_this_users)
+    }).bind(("127.0.0.1", 8080))?.run().await;
+
+    drop_tbls(&app_state_c).await;
+
+    server
 }

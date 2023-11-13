@@ -24,7 +24,9 @@ impl Data {
     }
 }
 
-pub fn mt_processing(r_dir_path: &String, h_dir_path: &String) {
+pub fn mt_processing(
+    r_dir_path: &String, h_dir_path: &String
+) -> (HashMap<u32, Hotel>, HashMap<u32, Vec<Review>>) {
     // HotelsInfo Struct
     let info: Arc<Mutex<HotelsInfo>> = 
         Arc::new(Mutex::new(HotelsInfo::new()));
@@ -45,10 +47,10 @@ pub fn mt_processing(r_dir_path: &String, h_dir_path: &String) {
     });
     handle.join().unwrap();
 
-    println!("\nMultithreading Approach: {:#?}", 
-        info.lock().unwrap().search_hotels(20191).unwrap());
-    println!("\nMultithreading Approach: {:#?}", 
-        info.lock().unwrap().search_reviews(20191).unwrap()[10]);
+    let hotels = info.lock().unwrap().get_hotels();
+    let reviews = info.lock().unwrap().get_reviews();
+
+    return (hotels, reviews);
 }
 
 pub fn r_processing(r_dir_path: &String, h_dir_path: &String) {

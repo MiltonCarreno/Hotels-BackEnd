@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use chrono::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Hotel {
     pub hotel_id: u32,
     pub name: String,
@@ -11,19 +11,7 @@ pub struct Hotel {
     pub country: String,
 }
 
-impl Hotel {
-    fn copy(&self) -> Hotel {
-        let hotel_id = self.hotel_id.clone();
-        let name = self.name.clone();
-        let address = self.address.clone();
-        let city = self.city.clone();
-        let province = self.province.clone();
-        let country = self.country.clone();
-        return Hotel { hotel_id, name, address, city, province, country };
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Review {
     pub hotel_id: u32,
     pub review_id: String,
@@ -34,20 +22,7 @@ pub struct Review {
     pub time: DateTime<Utc>,
 }
 
-impl Review {
-    fn copy(&self) -> Review {
-        let hotel_id = self.hotel_id.clone();
-        let review_id = self.review_id.clone();
-        let rating = self.rating.clone();
-        let author = self.author.clone();
-        let title = self.title.clone();
-        let text = self.text.clone();
-        let time = self.time.clone();
-        return Review { hotel_id, review_id, rating,
-                        author, title, text, time };
-    }
-}
-
+#[derive(Debug)]
 pub struct HotelsInfo {
     hotels_map: HashMap<u32, Hotel>,
     reviews_map: HashMap<u32, Vec<Review>>,
@@ -58,6 +33,14 @@ impl HotelsInfo {
         let hotels: HashMap<u32, Hotel> = HashMap::new();
         let reviews: HashMap<u32, Vec<Review>> = HashMap::new();
         return HotelsInfo { hotels_map: hotels, reviews_map: reviews };
+    }
+
+    pub fn get_hotels(&self) -> HashMap<u32, Hotel> {
+        self.hotels_map.clone()
+    }
+
+    pub fn get_reviews(&self) -> HashMap<u32, Vec<Review>> {
+        self.reviews_map.clone()
     }
 
     pub fn add_hotels(&mut self, hotels: HashMap<u32, Hotel>) {
@@ -78,7 +61,7 @@ impl HotelsInfo {
 
     pub fn search_hotels(&self, hotel_id: u32) -> Option<Hotel> {
         return match self.hotels_map.contains_key(&hotel_id) {
-            true => Some(self.hotels_map.get(&hotel_id).unwrap().copy()),
+            true => Some(self.hotels_map.get(&hotel_id).unwrap().clone()),
             false => None,
         }
     }
@@ -88,7 +71,7 @@ impl HotelsInfo {
             true => {
                 let mut reviews: Vec<Review> = vec![];
                 for r in self.reviews_map.get(&hotel_id).unwrap() {
-                    reviews.push(r.copy());
+                    reviews.push(r.clone());
                 }
                 Some(reviews)
             },
