@@ -1,26 +1,42 @@
 use actix_web::{get, post, web, HttpResponse};
 use sqlx::mysql::MySqlQueryResult;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use sqlx::Result;
 use crate::database::*;
 use crate::sql_strs::*;
+
+#[derive(Deserialize, Clone)]
+pub struct NewUser {
+    username: String,
+    email: String,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize, Clone)]
+pub struct User {
+    id: i32,
+    username: String,
+    email: String,
+}
 
 pub async fn root() -> String {
     "Server is up and running".to_string()
 }
 
-#[get("/add_this_user/{user_name}/{email}")]
-pub async fn add_this_users(
-    path: web::Path<(String, String)>, app_state: web::Data<AppState>
+#[post("/add_user")]
+pub async fn add_user(
+    user: web::Json<NewUser>, app_state: web::Data<AppState>
 ) -> HttpResponse {
-    let (user_name, email) = path.into_inner();
-    let added_users = sqlx::query(
+    let added_user = sqlx::query(
         INSERT_USER
-    ).bind(user_name).bind(email).execute(&app_state.pool).await;
+    ).bind(user.username.clone()).bind(user.email.clone())
+    .execute(&app_state.pool).await;
 
-    match added_users {
+    match added_user {
         Ok(_) => HttpResponse::Ok().into(),
-        Err(_) => HttpResponse::BadRequest().into(),
+        Err(e) => {
+            eprintln!("Error adding new user: {e}");
+            HttpResponse::BadRequest().into()
+        },
     }
 }
 
@@ -29,13 +45,6 @@ pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
 ) -> HttpResponse {
     let user_id: usize = path.into_inner();
 
-    #[derive(sqlx::FromRow, Serialize)]
-    struct User {
-        id: i32,
-        username: String,
-        email: String,
-    }
-
     let user: Result<Option<User>> = sqlx::query_as(
         SELECT_USER
     ).bind(user_id as u64)
@@ -43,7 +52,10 @@ pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
 
     match user {
         Ok(_) => HttpResponse::Ok().json(user.unwrap()),
-        Err(_) => HttpResponse::BadRequest().into(),
+        Err(e) => {
+            eprintln!("Error getting user: {e}"); 
+            HttpResponse::BadRequest().into()
+        }
     }
 }
 
@@ -57,7 +69,28 @@ pub async fn delete_user(path: web::Path<usize>, app_state: web::Data<AppState>
     ).bind(user_id as u64).execute(&app_state.pool).await;
 
     match deleted {
-        Ok(u) => HttpResponse::Ok().into(),
-        Err(_) => HttpResponse::BadRequest().into(),
+        Ok(_) => HttpResponse::Ok().into(),
+        Err(e) => {
+            eprintln!("Error deleting user: {e}");
+            HttpResponse::BadRequest().into()
+        },
+    }
+}
+
+#[post("/update")]
+pub async fn update_user(
+    user: web::Form<User>, app_state: web::Data<AppState>
+) -> HttpResponse {
+    let updated: sqlx::Result<MySqlQueryResult> = sqlx::query(
+        UPDATE_USER
+    ).bind(user.username.clone()).bind(user.email.clone()).bind(user.id)
+    .execute(&app_state.pool).await;
+
+    match updated {
+        Ok(_) => HttpResponse::Ok().into(),
+        Err(e) => {
+            eprintln!("Error updating user: {e}");
+            HttpResponse::BadRequest().into()
+        },
     }
 }

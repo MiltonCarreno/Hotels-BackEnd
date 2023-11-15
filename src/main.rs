@@ -52,7 +52,8 @@ async fn main() -> std::io::Result<()> {
             .route("/", web::get().to(root))
             .service(get_user)
             .service(delete_user)
-            .service(add_this_users)
+            .service(add_user)
+            .service(update_user)
     }).bind(("127.0.0.1", 8080))?.run().await;
 
     drop_tbls(&app_state_c).await;

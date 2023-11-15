@@ -35,6 +35,9 @@ pub const SELECT_USER: &str = "select * from users where id = ?";
 
 pub const DELETE_USER: &str = "delete from users where id = ?";
 
+pub const UPDATE_USER: &str = "update users set username = ?,\
+    email = ? where id = ?";
+
 pub const DROP_USERS_TABLE: &str = "drop table users;";
 
 pub const DROP_HOTELS_TABLE: &str = "drop table hotels;";
