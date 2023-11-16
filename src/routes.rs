@@ -4,6 +4,17 @@ use serde::{Serialize, Deserialize};
 use sqlx::Result;
 use crate::database::*;
 use crate::sql_strs::*;
+use data_parser::hotels_info::Hotel;
+
+// #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
+// pub struct Hotel {
+//     pub hotel_id: i32,
+//     pub name: String,
+//     pub address: String,
+//     pub city: String,
+//     pub province: String,
+//     pub country: String,
+// }
 
 #[derive(Deserialize, Clone)]
 pub struct NewUser {
@@ -51,9 +62,39 @@ pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
     .fetch_optional(&app_state.pool).await;
 
     match user {
-        Ok(_) => HttpResponse::Ok().json(user.unwrap()),
+        Ok(u) => HttpResponse::Ok().json(u.unwrap()),
         Err(e) => {
             eprintln!("Error getting user: {e}"); 
+            HttpResponse::BadRequest().into()
+        }
+    }
+}
+
+#[get("/get_all_users")]
+pub async fn get_all_users(app_state: web::Data<AppState>) -> HttpResponse {
+    let users: Result<Vec<User>> = sqlx::query_as(
+        SELECT_ALL_USERS
+    ).fetch_all(&app_state.pool).await;
+
+    match users {
+        Ok(us) => HttpResponse::Ok().json(us),
+        Err(e) => {
+            eprintln!("Error getting all hotels: {e}"); 
+            HttpResponse::BadRequest().into()
+        }
+    }
+}
+
+#[get("/get_all_hotels")]
+pub async fn get_all_hotels(app_state: web::Data<AppState>) -> HttpResponse {
+    let hotels: Result<Vec<Hotel>> = sqlx::query_as(
+        SELECT_ALL_HOTELS
+    ).fetch_all(&app_state.pool).await;
+
+    match hotels {
+        Ok(hs) => HttpResponse::Ok().json(hs),
+        Err(e) => {
+            eprintln!("Error getting all hotels: {e}"); 
             HttpResponse::BadRequest().into()
         }
     }

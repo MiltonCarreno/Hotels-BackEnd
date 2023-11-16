@@ -75,7 +75,7 @@ pub async fn add_users(app_state: &AppState) {
 }
 
 pub async fn add_hotels_data(
-    app_state: &AppState, hotels: HashMap<u32, Hotel>
+    app_state: &AppState, hotels: HashMap<i32, Hotel>
 ) {    
     for hotel in hotels.values() {
         let added_hotel = sqlx::query(
@@ -92,7 +92,7 @@ pub async fn add_hotels_data(
 }
 
 pub async fn add_reviews_data(
-    app_state: &AppState, reviews: HashMap<u32, Vec<Review>>
+    app_state: &AppState, reviews: HashMap<i32, Vec<Review>>
 ) {    
     for review_set in reviews.values() {
         for review in review_set {

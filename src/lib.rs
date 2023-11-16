@@ -26,7 +26,7 @@ impl Data {
 
 pub fn mt_processing(
     r_dir_path: &String, h_dir_path: &String
-) -> (HashMap<u32, Hotel>, HashMap<u32, Vec<Review>>) {
+) -> (HashMap<i32, Hotel>, HashMap<i32, Vec<Review>>) {
     // HotelsInfo Struct
     let info: Arc<Mutex<HotelsInfo>> = 
         Arc::new(Mutex::new(HotelsInfo::new()));
@@ -142,11 +142,11 @@ pub fn mt_process_reviews(file_path: String, hotels_info: Arc<Mutex<HotelsInfo>>
     if num_reviews > 0 {
         let mut reviews: Vec<Review> = vec![];
         for i in 0..num_reviews {
-            let hotel_id: u32 = collection[i]["hotelId"]
+            let hotel_id: i32 = collection[i]["hotelId"]
                 .as_str().unwrap().parse().unwrap();
             let review_id = collection[i]["reviewId"]
                 .as_str().unwrap().to_string();
-            let rating: u32 = collection[i]["ratingOverall"]
+            let rating: i32 = collection[i]["ratingOverall"]
                 .to_string().parse().unwrap();
             let author = collection[i]["userNickname"]
                 .as_str().unwrap().to_string();
@@ -181,10 +181,10 @@ pub fn mt_process_hotels(file_path: String, hotels_info: Arc<Mutex<HotelsInfo>>)
     let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
     let collection = &val["sr"];
     let num_hotels = collection.as_array().unwrap().len();
-    let mut hotels: HashMap<u32, Hotel> = HashMap::new();
+    let mut hotels: HashMap<i32, Hotel> = HashMap::new();
 
     for i in 0..num_hotels {
-        let hotel_id: u32 = collection[i]["id"]
+        let hotel_id: i32 = collection[i]["id"]
             .as_str().unwrap().parse().unwrap();
         let name = collection[i]["f"]
             .as_str().unwrap().to_string();
@@ -243,11 +243,11 @@ pub fn r_process_reviews(file_path: String, hotels_info: &mut HotelsInfo) {
     if num_reviews > 0 {
         let mut reviews: Vec<Review> = vec![];
         for i in 0..num_reviews {
-            let hotel_id: u32 = collection[i]["hotelId"]
+            let hotel_id: i32 = collection[i]["hotelId"]
                 .as_str().unwrap().parse().unwrap();
             let review_id = collection[i]["reviewId"]
                 .as_str().unwrap().to_string();
-            let rating: u32 = collection[i]["ratingOverall"]
+            let rating: i32 = collection[i]["ratingOverall"]
                 .to_string().parse().unwrap();
             let author = collection[i]["userNickname"]
                 .as_str().unwrap().to_string();
@@ -273,10 +273,10 @@ pub fn r_process_hotels(file_path: String, hotels_info: &mut HotelsInfo) {
     let val: serde_json::Value = serde_json::from_reader(reader).unwrap();
     let collection = &val["sr"];
     let num_hotels = collection.as_array().unwrap().len();
-    let mut hotels: HashMap<u32, Hotel> = HashMap::new();
+    let mut hotels: HashMap<i32, Hotel> = HashMap::new();
 
     for i in 0..num_hotels {
-        let hotel_id: u32 = collection[i]["id"]
+        let hotel_id: i32 = collection[i]["id"]
             .as_str().unwrap().parse().unwrap();
         let name = collection[i]["f"]
             .as_str().unwrap().to_string();

@@ -1,6 +1,7 @@
 use std::env;
 use std::process;
-use actix_web::{web, App, HttpServer};
+use actix_web::{http::header, web, App, HttpServer};
+use actix_cors::Cors;
 use sqlx::mysql::MySqlPoolOptions;
 
 mod config;
@@ -47,10 +48,19 @@ async fn main() -> std::io::Result<()> {
     add_users(&app_state).await;
 
     let server = HttpServer::new(move || {
-        App::new()
+        let cors = Cors::default()
+            .allowed_origin("http://localhost:5173")
+            .allowed_methods(vec!["GET", "POST"])
+            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+            .allowed_header(header::CONTENT_TYPE)
+            .max_age(3600);
+
+        App::new().wrap(cors)
             .app_data(web::Data::new(app_state.clone()))
             .route("/", web::get().to(root))
             .service(get_user)
+            .service(get_all_users)
+            .service(get_all_hotels)
             .service(delete_user)
             .service(add_user)
             .service(update_user)
