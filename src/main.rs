@@ -42,10 +42,10 @@ async fn main() -> std::io::Result<()> {
     let app_state = AppState { pool };
     let app_state_c = app_state.clone();
 
-    create_tbls(&app_state).await;
-    add_hotels_data(&app_state, hotels).await;
-    add_reviews_data(&app_state, reviews).await;
-    add_users(&app_state).await;
+    // create_tbls(&app_state).await;
+    // add_hotels_data(&app_state, hotels).await;
+    // add_reviews_data(&app_state, reviews).await;
+    // add_users(&app_state).await;
 
     let server = HttpServer::new(move || {
         let cors = Cors::default()
@@ -59,14 +59,16 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(app_state.clone()))
             .route("/", web::get().to(root))
             .service(get_user)
-            .service(get_all_users)
-            .service(get_all_hotels)
-            .service(delete_user)
             .service(add_user)
+            .service(delete_user)
             .service(update_user)
+            .service(get_all_users)
+            .service(get_hotel)
+            .service(get_all_hotels)
+            .service(get_like_hotels)
     }).bind(("127.0.0.1", 8080))?.run().await;
 
-    drop_tbls(&app_state_c).await;
+    // drop_tbls(&app_state_c).await;
 
     server
 }

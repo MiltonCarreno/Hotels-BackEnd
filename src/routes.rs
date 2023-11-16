@@ -6,16 +6,6 @@ use crate::database::*;
 use crate::sql_strs::*;
 use data_parser::hotels_info::Hotel;
 
-// #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
-// pub struct Hotel {
-//     pub hotel_id: i32,
-//     pub name: String,
-//     pub address: String,
-//     pub city: String,
-//     pub province: String,
-//     pub country: String,
-// }
-
 #[derive(Deserialize, Clone)]
 pub struct NewUser {
     username: String,
@@ -51,7 +41,7 @@ pub async fn add_user(
     }
 }
 
-#[get("/get/{user_id}")]
+#[get("/get_user/{user_id}")]
 pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
 ) -> HttpResponse {
     let user_id: usize = path.into_inner();
@@ -70,6 +60,45 @@ pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
     }
 }
 
+#[get("/get_hotel/{hotel_id}")]
+pub async fn get_hotel(path: web::Path<usize>, app_state: web::Data<AppState>
+) -> HttpResponse {
+    let hotel_id: usize = path.into_inner();
+
+    let hotel: Result<Option<Hotel>> = sqlx::query_as(
+        SELECT_HOTEL
+    ).bind(hotel_id as u64)
+    .fetch_optional(&app_state.pool).await;
+
+    match hotel {
+        Ok(h) => HttpResponse::Ok().json(h.unwrap()),
+        Err(e) => {
+            eprintln!("Error getting hotel: {e}"); 
+            HttpResponse::BadRequest().into()
+        }
+    }
+}
+
+#[get("/get_like_hotels/{hotel_name}")]
+pub async fn get_like_hotels(path: web::Path<String>, app_state: web::Data<AppState>
+) -> HttpResponse {
+    let mut hotel_name =  path.into_inner();
+    hotel_name = "%".to_string() + &hotel_name + "%";
+
+    let hotels: Result<Vec<Hotel>> = sqlx::query_as(
+        SELECT_LIKE_HOTELS
+    ).bind(hotel_name)
+    .fetch_all(&app_state.pool).await;
+
+    match hotels {
+        Ok(hs) => HttpResponse::Ok().json(hs),
+        Err(e) => {
+            eprintln!("Error getting hotel: {e}"); 
+            HttpResponse::BadRequest().into()
+        }
+    }
+}
+
 #[get("/get_all_users")]
 pub async fn get_all_users(app_state: web::Data<AppState>) -> HttpResponse {
     let users: Result<Vec<User>> = sqlx::query_as(
@@ -79,7 +108,7 @@ pub async fn get_all_users(app_state: web::Data<AppState>) -> HttpResponse {
     match users {
         Ok(us) => HttpResponse::Ok().json(us),
         Err(e) => {
-            eprintln!("Error getting all hotels: {e}"); 
+            eprintln!("Error getting all users: {e}"); 
             HttpResponse::BadRequest().into()
         }
     }

@@ -33,6 +33,10 @@ pub const INSERT_USER: &str = "insert into users(username, email) values \
 
 pub const SELECT_USER: &str = "select * from users where id = ?";
 
+pub const SELECT_HOTEL: &str = "select * from hotels where hotel_id = ?";
+
+pub const SELECT_LIKE_HOTELS: &str = "select * from hotels where name like ?";
+
 pub const SELECT_ALL_USERS: &str = "select * from users";
 
 pub const SELECT_ALL_HOTELS: &str = "select * from hotels";
