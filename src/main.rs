@@ -66,6 +66,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_hotel)
             .service(get_all_hotels)
             .service(get_like_hotels)
+            .service(get_hotel_reviews)
     }).bind(("127.0.0.1", 8080))?.run().await;
 
     // drop_tbls(&app_state_c).await;
