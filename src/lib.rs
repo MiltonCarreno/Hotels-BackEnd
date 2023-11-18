@@ -148,15 +148,23 @@ pub fn mt_process_reviews(file_path: String, hotels_info: Arc<Mutex<HotelsInfo>>
                 .as_str().unwrap().to_string();
             let rating: i32 = collection[i]["ratingOverall"]
                 .to_string().parse().unwrap();
-            let author = collection[i]["userNickname"]
-                .as_str().unwrap().to_string();
-            let title = collection[i]["title"]
-                .as_str().unwrap().to_string();
             let text = collection[i]["reviewText"]
                 .as_str().unwrap().to_string();
             let time = collection[i]["reviewSubmissionTime"]
                 .as_str().unwrap().parse::<DateTime<Utc>>().unwrap();
-        
+            let author = match (collection[i]["userNickname"]
+                .as_str().unwrap().to_string().is_empty()) {
+                true => { "ANONYMOUS".to_string() }
+                false => { collection[i]["userNickname"].as_str().unwrap()
+                    .to_string() }
+            };
+            let title = match (collection[i]["title"]
+                .as_str().unwrap().to_string().is_empty()) {
+                true => { "NO TITLE".to_string() }
+                false => { collection[i]["title"].as_str().unwrap()
+                    .to_string() }
+            };
+
             reviews.push(
                 Review { hotel_id, review_id, rating,
                         author, title, text, time }
@@ -249,15 +257,23 @@ pub fn r_process_reviews(file_path: String, hotels_info: &mut HotelsInfo) {
                 .as_str().unwrap().to_string();
             let rating: i32 = collection[i]["ratingOverall"]
                 .to_string().parse().unwrap();
-            let author = collection[i]["userNickname"]
-                .as_str().unwrap().to_string();
-            let title = collection[i]["title"]
-                .as_str().unwrap().to_string();
             let text = collection[i]["reviewText"]
                 .as_str().unwrap().to_string();
             let time = collection[i]["reviewSubmissionTime"]
                 .as_str().unwrap().parse::<DateTime<Utc>>().unwrap();
-        
+            let author = match (collection[i]["userNickname"]
+                .as_str().unwrap().to_string().is_empty()) {
+                true => { "ANONYMOUS".to_string() }
+                false => { collection[i]["userNickname"].as_str().unwrap()
+                    .to_string() }
+            };
+            let title = match (collection[i]["title"]
+                .as_str().unwrap().to_string().is_empty()) {
+                true => { "NO TITLE".to_string() }
+                false => { collection[i]["title"].as_str().unwrap()
+                    .to_string() }
+            };
+
             reviews.push(
                 Review { hotel_id, review_id, rating,
                         author, title, text, time }

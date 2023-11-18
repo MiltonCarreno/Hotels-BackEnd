@@ -12,8 +12,7 @@ pub const CREATE_HOTELS_TABLE: &str = "\
 pub const CREATE_REVIEWS_TABLE: &str = "\
     create table if not exists reviews(review_id VARCHAR(100) NOT NULL, \
     hotel_id INT NOT NULL, rating INT NOT NULL, \
-    author VARCHAR(100) DEFAULT 'ANONYMOUS', \
-    title VARCHAR(200) DEFAULT 'NO TITLE', text VARCHAR(5000), \
+    author VARCHAR(100), title VARCHAR(200), text VARCHAR(5000), \
     time VARCHAR(100) NOT NULL, PRIMARY KEY(review_id), \
     FOREIGN KEY(hotel_id) REFERENCES hotels(hotel_id))";
 
