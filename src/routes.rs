@@ -22,6 +22,7 @@ pub struct User {
 #[derive(Deserialize, Clone)]
 pub struct NewUserReview {
     user_id: i32,
+    hotel_id: i32,
     title: String,
     text: String,
 }
@@ -30,6 +31,7 @@ pub struct NewUserReview {
 pub struct UserReview {
     review_id: i32,
     user_id: i32,
+    hotel_id: i32,
     title: String,
     text: String,
 }
@@ -62,8 +64,9 @@ pub async fn add_user_review(
 ) -> HttpResponse {
     let added_user_review = sqlx::query(
         INSERT_USER_REVIEW
-    ).bind(review.user_id.clone()).bind(review.title.clone())
-    .bind(review.text.clone()).execute(&app_state.pool).await;
+    ).bind(review.user_id.clone()).bind(review.hotel_id.clone())
+    .bind(review.title.clone()).bind(review.text.clone())
+    .execute(&app_state.pool).await;
 
     match added_user_review {
         Ok(_) => HttpResponse::Ok().into(),
@@ -264,3 +267,8 @@ pub async fn update_user(
         },
     }
 }
+
+// user: add, update, delete
+// hotels: get, get like
+// reviews: get by hotel
+// user_reviews: add, update, get all, get by hotel, delete

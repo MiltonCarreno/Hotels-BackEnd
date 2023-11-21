@@ -18,8 +18,9 @@ pub const CREATE_REVIEWS_TABLE: &str = "\
 
 pub const CREATE_USER_REVIEWS_TABLE: &str = "\
     create table if not exists user_reviews(review_id INT AUTO_INCREMENT, \
-    user_id INT NOT NULL, title VARCHAR(200), text VARCHAR(5000), \
-    PRIMARY KEY(review_id), FOREIGN KEY(user_id) REFERENCES users(id))";
+    user_id INT NOT NULL, hotel_id INT NOT NULL, title VARCHAR(200), text VARCHAR(5000), \
+    PRIMARY KEY(review_id), FOREIGN KEY(user_id) REFERENCES users(id), \
+    FOREIGN KEY(hotel_id) REFERENCES hotels(hotel_id))";
 
 pub const INSERT_USERS: &str = "insert into users(username, email) values \
     ('charles', 'cMingus@moaning.ca'), ('willie', 'wColon@miSueno.co'), \
@@ -33,7 +34,7 @@ pub const INSERT_REVIEW: &str = "insert into reviews(review_id, hotel_id, \
     rating, author, title, text, time) values (?, ?, ?, ?, ?, ?, ?);";
 
 pub const INSERT_USER_REVIEW: &str = "insert into user_reviews(user_id, \
-    title, text) values (?, ?, ?);";
+    hotel_id, title, text) values (?, ?, ?, ?);";
 
 pub const INSERT_USER: &str = "insert into users(username, email) values \
     (?, ?);";
