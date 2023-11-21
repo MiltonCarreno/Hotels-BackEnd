@@ -36,6 +36,14 @@ pub async fn create_tbls(app_state: &AppState) {
     if let Err(e) = reviews_tbl {
         eprintln!("Error creating 'hotels' table: {}", e);
     }
+
+    let user_reviews_tbl = sqlx::query(
+        CREATE_USER_REVIEWS_TABLE
+    ).execute(&app_state.pool).await;
+
+    if let Err(e) = user_reviews_tbl {
+        eprintln!("Error creating 'users_reviews' table: {}", e);
+    }
 }
 
 pub async fn drop_tbls(app_state: &AppState) {

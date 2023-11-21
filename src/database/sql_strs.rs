@@ -16,6 +16,11 @@ pub const CREATE_REVIEWS_TABLE: &str = "\
     time VARCHAR(100) NOT NULL, PRIMARY KEY(review_id), \
     FOREIGN KEY(hotel_id) REFERENCES hotels(hotel_id))";
 
+pub const CREATE_USER_REVIEWS_TABLE: &str = "\
+    create table if not exists user_reviews(review_id INT AUTO_INCREMENT, \
+    user_id INT NOT NULL, title VARCHAR(200), text VARCHAR(5000), \
+    PRIMARY KEY(review_id), FOREIGN KEY(user_id) REFERENCES users(id))";
+
 pub const INSERT_USERS: &str = "insert into users(username, email) values \
     ('charles', 'cMingus@moaning.ca'), ('willie', 'wColon@miSueno.co'), \
     ('chet', 'cBaker@fallingTooEasily.us'), ('dave', 'dBrubeck@take5.po'), \
@@ -26,6 +31,9 @@ pub const INSERT_HOTEL: &str = "insert into hotels(hotel_id, name, address, \
 
 pub const INSERT_REVIEW: &str = "insert into reviews(review_id, hotel_id, \
     rating, author, title, text, time) values (?, ?, ?, ?, ?, ?, ?);";
+
+pub const INSERT_USER_REVIEW: &str = "insert into user_reviews(user_id, \
+    title, text) values (?, ?, ?);";
 
 pub const INSERT_USER: &str = "insert into users(username, email) values \
     (?, ?);";
@@ -43,7 +51,12 @@ pub const SELECT_ALL_USERS: &str = "select * from users";
 
 pub const SELECT_ALL_HOTELS: &str = "select * from hotels";
 
+pub const SELECT_ALL_USER_REVIEWS: &str = "select * from user_reviews";
+
 pub const DELETE_USER: &str = "delete from users where id = ?";
+
+pub const DELETE_USER_REVIEW: &str = "delete from user_reviews where \
+    review_id = ?";
 
 pub const UPDATE_USER: &str = "update users set username = ?,\
     email = ? where id = ?";

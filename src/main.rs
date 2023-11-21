@@ -42,7 +42,7 @@ async fn main() -> std::io::Result<()> {
     let app_state = AppState { pool };
     let app_state_c = app_state.clone();
 
-    // create_tbls(&app_state).await;
+    create_tbls(&app_state).await;
     // add_hotels_data(&app_state, hotels).await;
     // add_reviews_data(&app_state, reviews).await;
     // add_users(&app_state).await;
@@ -67,6 +67,9 @@ async fn main() -> std::io::Result<()> {
             .service(get_all_hotels)
             .service(get_like_hotels)
             .service(get_hotel_reviews)
+            .service(add_user_review)
+            .service(get_all_user_reviews)
+            .service(delete_user_review)
     }).bind(("127.0.0.1", 8080))?.run().await;
 
     // drop_tbls(&app_state_c).await;
