@@ -1,3 +1,5 @@
+pub use crate::hotels_info::*;
+
 pub enum Data {
     Hotels,
     Reviews,

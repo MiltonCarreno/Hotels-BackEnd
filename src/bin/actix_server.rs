@@ -4,14 +4,7 @@ use actix_web::{http::header, web, App, HttpServer};
 use actix_cors::Cors;
 use sqlx::mysql::MySqlPoolOptions;
 
-mod config;
-mod database;
-mod routes;
-
-use config::Config;
-use database::*;
-use routes::*;
-use data_parser::mt_processing;
+use data_parser::{config::*, parser::*, database::*, routes::*};
 
 
 #[actix_web::main]
@@ -25,7 +18,7 @@ async fn main() -> std::io::Result<()> {
         });
     
     // Multithreading approach
-    let (hotels, reviews) = 
+    let (_hotels, _reviews) = 
     mt_processing(
         &config.reviews_path,
         &config.hotels_path,
@@ -40,9 +33,9 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     let app_state = AppState { pool };
-    let app_state_c = app_state.clone();
+    let _app_state_c = app_state.clone();
 
-    create_tbls(&app_state).await;
+    // create_tbls(&app_state).await;
     // add_hotels_data(&app_state, hotels).await;
     // add_reviews_data(&app_state, reviews).await;
     // add_users(&app_state).await;

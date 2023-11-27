@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use chrono::prelude::*;
 
 use crate::parser::utils::*;
-use crate::hotels_info::*;
 
 pub fn mt_traverse_dir(
     dir_path: String, hotels_info: Arc<Mutex<HotelsInfo>>, data: Data) {
@@ -75,14 +74,14 @@ pub fn mt_process_reviews(file_path: String, hotels_info: Arc<Mutex<HotelsInfo>>
                 .as_str().unwrap().to_string();
             let time = collection[i]["reviewSubmissionTime"]
                 .as_str().unwrap().parse::<DateTime<Utc>>().unwrap();
-            let author = match (collection[i]["userNickname"]
-                .as_str().unwrap().to_string().is_empty()) {
+            let author = match collection[i]["userNickname"]
+                .as_str().unwrap().to_string().is_empty() {
                 true => { "ANONYMOUS".to_string() }
                 false => { collection[i]["userNickname"].as_str().unwrap()
                     .to_string() }
             };
-            let title = match (collection[i]["title"]
-                .as_str().unwrap().to_string().is_empty()) {
+            let title = match collection[i]["title"]
+                .as_str().unwrap().to_string().is_empty() {
                 true => { "NO TITLE".to_string() }
                 false => { collection[i]["title"].as_str().unwrap()
                     .to_string() }

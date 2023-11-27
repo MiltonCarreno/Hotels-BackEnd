@@ -6,7 +6,6 @@ pub mod multithreaded;
 pub mod recursive;
 mod utils;
 
-use crate::hotels_info::*;
 use multithreaded::*;
 use recursive::*;
 use utils::*;
