@@ -2,9 +2,8 @@ use actix_web::{get, post, web, HttpResponse};
 use sqlx::mysql::MySqlQueryResult;
 use serde::{Serialize, Deserialize};
 use sqlx::Result;
+
 use crate::database::*;
-use crate::sql_strs::*;
-use data_parser::hotels_info::{Hotel, Review};
 
 #[derive(Deserialize, Clone)]
 pub struct NewUser {

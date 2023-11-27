@@ -1,11 +1,10 @@
 use std::collections::HashMap;
-use data_parser::hotels_info::Hotel;
-use data_parser::hotels_info::Review;
 use sqlx::MySqlPool;
 
 pub mod sql_strs;
 
-use sql_strs::*;
+pub use sql_strs::*;
+pub use crate::hotels_info::*;
 
 #[derive(Clone)]
 pub struct AppState {
