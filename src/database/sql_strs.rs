@@ -57,6 +57,12 @@ pub const SELECT_ALL_HOTELS: &str = "select * from hotels";
 
 pub const SELECT_ALL_USER_REVIEWS: &str = "select * from user_reviews";
 
+pub const SELECT_USER_REVIEWS_BY_USER_ID: &str = "select * from user_reviews \
+    where user_id = ?";
+
+pub const SELECT_USER_REVIEWS_BY_HOTEL_ID: &str = "select * from user_reviews \
+    where hotel_id = ?";
+
 pub const DELETE_USER: &str = "delete from users where id = ?";
 
 pub const DELETE_USER_REVIEW: &str = "delete from user_reviews where \

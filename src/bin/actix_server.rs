@@ -63,6 +63,8 @@ async fn main() -> std::io::Result<()> {
             .service(get_hotel_reviews)
             .service(add_user_review)
             .service(get_all_user_reviews)
+            .service(get_user_reviews_by_user_id)
+            .service(get_user_reviews_by_hotel_id)
             .service(delete_user_review)
     }).bind(("127.0.0.1", 8080))?.run().await;
 
