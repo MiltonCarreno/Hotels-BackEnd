@@ -52,6 +52,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(app_state.clone()))
             .route("/", web::get().to(root))
             .service(get_user)
+            .service(check_user)
             .service(add_user)
             .service(delete_user)
             .service(update_user)

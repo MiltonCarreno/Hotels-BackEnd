@@ -41,6 +41,9 @@ pub const INSERT_USER: &str = "insert into users(username, email) values \
 
 pub const SELECT_USER: &str = "select * from users where id = ?";
 
+pub const SELECT_USER_BY_CREDS: &str = "select * from users where \
+    username = ? and email = ?";
+
 pub const SELECT_HOTEL: &str = "select * from hotels where hotel_id = ?";
 
 pub const SELECT_HOTEL_REVIEWS: &str = "select * from reviews where \

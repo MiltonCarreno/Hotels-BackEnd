@@ -37,6 +37,34 @@ pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
     }
 }
 
+#[get("/check_user/{username}&{email}")]
+pub async fn check_user(path: web::Path<(String, String)>, app_state: web::Data<AppState>
+) -> HttpResponse {
+    let (username, email) = path.into_inner();
+    println!("URL - username: {username} - email: {email}");
+
+    let user: Result<Option<User>> = sqlx::query_as(
+        SELECT_USER_BY_CREDS
+    ).bind(username).bind(email)
+    .fetch_optional(&app_state.pool).await;
+
+    match user {
+        Ok(u) => {
+            match u {
+                Some(u) => {
+                    println!("U: {:#?}", u);
+                    HttpResponse::Ok().json("Valid user")
+                },
+                None => HttpResponse::Ok().json("Invalid user")
+            }
+        },
+        Err(e) => {
+            eprintln!("Error getting user: {e}"); 
+            HttpResponse::BadRequest().into()
+        }
+    }
+}
+
 #[get("/get_all_users")]
 pub async fn get_all_users(app_state: web::Data<AppState>) -> HttpResponse {
     let users: Result<Vec<User>> = sqlx::query_as(
