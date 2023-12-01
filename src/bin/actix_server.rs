@@ -36,8 +36,8 @@ async fn main() -> std::io::Result<()> {
     let _app_state_c = app_state.clone();
 
     // create_tbls(&app_state).await;
-    // add_hotels_data(&app_state, hotels).await;
-    // add_reviews_data(&app_state, reviews).await;
+    // add_hotels_data(&app_state, _hotels).await;
+    // add_reviews_data(&app_state, _reviews).await;
     // add_users(&app_state).await;
 
     let server = HttpServer::new(move || {
@@ -63,7 +63,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_hotel_reviews)
             .service(add_user_review)
             .service(get_all_user_reviews)
-            .service(get_user_reviews_by_user_id)
+            .service(get_user_reviews_by_username)
             .service(get_user_reviews_by_hotel_id)
             .service(delete_user_review)
     }).bind(("127.0.0.1", 8080))?.run().await;

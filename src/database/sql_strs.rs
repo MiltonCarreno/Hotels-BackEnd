@@ -1,6 +1,6 @@
 pub const CREATE_USERS_TABLE: &str = "\
     create table if not exists users(id INT AUTO_INCREMENT, \
-    username VARCHAR(15) NOT NULL, email VARCHAR(255) NOT NULL, \
+    username VARCHAR(15) NOT NULL UNIQUE, email VARCHAR(255) NOT NULL UNIQUE, \
     PRIMARY KEY(id));";
 
 pub const CREATE_HOTELS_TABLE: &str = "\
@@ -42,7 +42,7 @@ pub const INSERT_USER: &str = "insert into users(username, email) values \
 pub const SELECT_USER: &str = "select * from users where id = ?";
 
 pub const SELECT_USER_BY_CREDS: &str = "select * from users where \
-    username = ? and email = ?";
+    username = ? or email = ?";
 
 pub const SELECT_HOTEL: &str = "select * from hotels where hotel_id = ?";
 
@@ -57,8 +57,9 @@ pub const SELECT_ALL_HOTELS: &str = "select * from hotels";
 
 pub const SELECT_ALL_USER_REVIEWS: &str = "select * from user_reviews";
 
-pub const SELECT_USER_REVIEWS_BY_USER_ID: &str = "select * from user_reviews \
-    where user_id = ?";
+pub const SELECT_USER_REVIEWS_BY_USERNAME: &str = "select * from user_reviews \
+    inner join users on user_reviews.user_id = users.id \
+    where users.username = ?";
 
 pub const SELECT_USER_REVIEWS_BY_HOTEL_ID: &str = "select * from user_reviews \
     where hotel_id = ?";

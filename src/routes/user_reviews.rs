@@ -35,14 +35,14 @@ pub async fn get_all_user_reviews(app_state: web::Data<AppState>
     }
 }
 
-#[get("/get_user_reviews_by_user_id/{user_id}")]
-pub async fn get_user_reviews_by_user_id(
-    path: web::Path<usize>, app_state: web::Data<AppState>
+#[get("/get_user_reviews_by_username/{username}")]
+pub async fn get_user_reviews_by_username(
+    path: web::Path<String>, app_state: web::Data<AppState>
 ) -> HttpResponse {
-    let user_id = path.into_inner();
+    let username = path.into_inner();
     let user_reviews: Result<Vec<UserReview>> = sqlx::query_as(
-        SELECT_USER_REVIEWS_BY_USER_ID
-    ).bind(user_id as u64).fetch_all(&app_state.pool).await;
+        SELECT_USER_REVIEWS_BY_USERNAME
+    ).bind(username).fetch_all(&app_state.pool).await;
 
     match user_reviews {
         Ok(us) => HttpResponse::Ok().json(us),

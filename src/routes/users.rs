@@ -53,9 +53,9 @@ pub async fn check_user(path: web::Path<(String, String)>, app_state: web::Data<
             match u {
                 Some(u) => {
                     println!("U: {:#?}", u);
-                    HttpResponse::Ok().json("Valid user")
+                    HttpResponse::Ok().json(true)
                 },
-                None => HttpResponse::Ok().json("Invalid user")
+                None => HttpResponse::Ok().json(false)
             }
         },
         Err(e) => {
