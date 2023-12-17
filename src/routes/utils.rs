@@ -1,6 +1,7 @@
 pub use actix_web::{get, post, web, HttpResponse};
 pub use sqlx::mysql::MySqlQueryResult;
 pub use serde::{Serialize, Deserialize};
+use jsonwebtoken::{encode, EncodingKey};
 pub use sqlx::Result;
 
 pub use crate::database::*;
@@ -33,4 +34,12 @@ pub struct UserReview {
     pub hotel_id: i32,
     pub title: String,
     pub text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    user_id: usize,
+    name: String,
+    email: String,
+    exp: usize,
 }
