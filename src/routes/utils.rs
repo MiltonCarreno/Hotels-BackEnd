@@ -1,8 +1,11 @@
 pub use actix_web::{get, post, web, HttpResponse};
 pub use sqlx::mysql::MySqlQueryResult;
 pub use serde::{Serialize, Deserialize};
-use jsonwebtoken::{encode, EncodingKey};
 pub use sqlx::Result;
+use jsonwebtoken::{
+    encode, decode, EncodingKey, Header, DecodingKey, Validation
+};
+use chrono::{Utc, Duration};
 
 pub use crate::database::*;
 
@@ -42,4 +45,31 @@ struct Claims {
     name: String,
     email: String,
     exp: usize,
+}
+
+async fn create_jwt(user_id: usize, secret: String) -> String {
+    let claims: Claims = Claims { 
+        user_id, name: "name".to_string(), email: "email".to_string(), 
+        exp: (Utc::now() + Duration::hours(1)).timestamp() as usize
+    };
+
+    return encode(
+        &Header::default(), 
+        &claims, 
+        &EncodingKey::from_secret(secret.as_ref())
+    ).unwrap();
+}
+
+async fn check_jwt(token: String, secret: String) -> bool {
+    let token = decode::<Claims>(
+        &token, &DecodingKey::from_secret(secret.as_ref()),
+        &Validation::default()
+    );
+    match token {
+        Ok(_) => true,
+        Err(e) => {
+            println!("Error validating token: {e}");
+            false
+        }
+    }
 }
