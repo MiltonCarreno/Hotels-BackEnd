@@ -40,18 +40,20 @@ pub struct UserReview {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    user_id: usize,
-    name: String,
-    email: String,
-    exp: usize,
+pub struct Claims {
+    pub user_id: usize,
+    pub name: String,
+    pub email: String,
+    pub exp: usize,
 }
 
-async fn create_jwt(user_id: usize, secret: String) -> String {
+pub fn create_jwt(user_id: usize, secret: String) -> String {
     let claims: Claims = Claims { 
         user_id, name: "name".to_string(), email: "email".to_string(), 
         exp: (Utc::now() + Duration::hours(1)).timestamp() as usize
     };
+
+    println!("Claims: {:#?}", claims);
 
     return encode(
         &Header::default(), 
@@ -60,13 +62,16 @@ async fn create_jwt(user_id: usize, secret: String) -> String {
     ).unwrap();
 }
 
-async fn check_jwt(token: String, secret: String) -> bool {
+pub fn check_jwt(token: String, secret: String) -> bool {
     let token = decode::<Claims>(
         &token, &DecodingKey::from_secret(secret.as_ref()),
         &Validation::default()
     );
     match token {
-        Ok(_) => true,
+        Ok(tok) => {
+            println!("TOKEN-CLAIMS: {:#?}", tok.claims);
+            true
+        },
         Err(e) => {
             println!("Error validating token: {e}");
             false

@@ -3,6 +3,7 @@ pub mod reviews;
 pub mod users;
 pub mod user_reviews;
 mod utils;
+mod auth_token;
 
 pub use hotels::*;
 pub use reviews::*;

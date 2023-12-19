@@ -38,7 +38,8 @@ pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
 }
 
 #[get("/check_user/{username}&{email}")]
-pub async fn check_user(path: web::Path<(String, String)>, app_state: web::Data<AppState>
+pub async fn check_user(
+    path: web::Path<(String, String)>, app_state: web::Data<AppState>
 ) -> HttpResponse {
     let (username, email) = path.into_inner();
     println!("URL - username: {username} - email: {email}");
@@ -53,6 +54,11 @@ pub async fn check_user(path: web::Path<(String, String)>, app_state: web::Data<
             match u {
                 Some(u) => {
                     println!("U: {:#?}", u);
+                    let token = create_jwt(
+                        u.id as usize, "SECRET".to_string()
+                    );
+                    println!("TOKEN: {token}");
+                    let _ = check_jwt(token, "SECRET".to_string());
                     HttpResponse::Ok().json(true)
                 },
                 None => HttpResponse::Ok().json(false)
