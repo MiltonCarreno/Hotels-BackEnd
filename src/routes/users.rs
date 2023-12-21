@@ -1,4 +1,5 @@
 use crate::routes::utils::*;
+use crate::routes::jwt_extractor::AuthorizationToken;
 
 #[post("/add_user")]
 pub async fn add_user(
@@ -35,6 +36,12 @@ pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
             HttpResponse::BadRequest().into()
         }
     }
+}
+
+#[get("/protected_user")]
+pub async fn protected_user(auth_token: AuthorizationToken) -> HttpResponse {
+    println!("{}", auth_token.id);
+    return HttpResponse::Ok().json(auth_token.id);
 }
 
 #[get("/check_user/{username}&{email}")]

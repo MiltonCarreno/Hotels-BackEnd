@@ -32,7 +32,7 @@ async fn main() -> std::io::Result<()> {
         .await
         .unwrap();
 
-    let app_state = AppState { pool };
+    let app_state = AppState { pool, secret: "SECRET".to_string() };
     let _app_state_c = app_state.clone();
 
     // create_tbls(&app_state).await;
@@ -66,6 +66,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_user_reviews_by_username)
             .service(get_user_reviews_by_hotel_id)
             .service(delete_user_review)
+            .service(protected_user)
     }).bind(("127.0.0.1", 8080))?.run().await;
 
     // drop_tbls(&app_state_c).await;

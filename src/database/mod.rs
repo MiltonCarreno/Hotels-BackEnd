@@ -9,6 +9,7 @@ pub use crate::hotels_info::*;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: MySqlPool,
+    pub secret: String,
 }
 
 pub async fn create_tbls(app_state: &AppState) {
