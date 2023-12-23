@@ -38,10 +38,46 @@ pub async fn get_user(path: web::Path<usize>, app_state: web::Data<AppState>
     }
 }
 
-#[get("/protected_user")]
-pub async fn protected_user(auth_token: AuthorizationToken) -> HttpResponse {
-    println!("{}", auth_token.id);
-    return HttpResponse::Ok().json(auth_token.id);
+#[derive(Serialize)]
+struct Response {
+    found_user: bool,
+    token: String,
+}
+
+#[get("/login/{username}&{email}")]
+pub async fn login(
+    path: web::Path<(String, String)>, 
+    app_state: web::Data<AppState>
+) -> HttpResponse {
+    let (username, email) = path.into_inner();
+
+    let user: Result<Option<User>> = sqlx::query_as(
+        SELECT_USER_BY_CREDS
+    ).bind(username).bind(email)
+    .fetch_optional(&app_state.pool).await;
+
+    match user {
+        Ok(u) => {
+            match u {
+                Some(u) => {
+                    println!("U: {:#?}", u);
+                    let token = create_jwt(
+                        u.id as usize, u.username, u.email, 
+                        "SECRET".to_string()
+                    );
+                    println!("TOKEN: {}",token);
+                    let _ = check_jwt(token.clone(), "SECRET".to_string());
+                    HttpResponse::Ok().json(Response {found_user: true, token})
+                },
+                None => HttpResponse::Ok()
+                    .json(Response {found_user: false, token: "".to_string()})
+            }
+        },
+        Err(e) => {
+            eprintln!("Error getting user: {e}"); 
+            HttpResponse::BadRequest().into()
+        }
+    }
 }
 
 #[get("/check_user/{username}&{email}")]
@@ -62,7 +98,8 @@ pub async fn check_user(
                 Some(u) => {
                     println!("U: {:#?}", u);
                     let token = create_jwt(
-                        u.id as usize, "SECRET".to_string()
+                        u.id as usize, u.username, u.email, 
+                        "SECRET".to_string()
                     );
                     println!("TOKEN: {token}");
                     let _ = check_jwt(token, "SECRET".to_string());

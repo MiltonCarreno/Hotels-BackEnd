@@ -42,14 +42,16 @@ pub struct UserReview {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub user_id: usize,
-    pub name: String,
+    pub username: String,
     pub email: String,
     pub exp: usize,
 }
 
-pub fn create_jwt(user_id: usize, secret: String) -> String {
+pub fn create_jwt(
+    user_id: usize, username: String, email: String, secret: String
+) -> String {
     let claims: Claims = Claims { 
-        user_id, name: "name".to_string(), email: "email".to_string(), 
+        user_id, username, email, 
         exp: (Utc::now() + Duration::hours(1)).timestamp() as usize
     };
 
